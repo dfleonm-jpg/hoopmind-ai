@@ -154,6 +154,7 @@ model ShotLog {
   attempted  Int       @default(0)
   createdAt  DateTime  @default(now())
 
+  @@unique([sessionId, exerciseId, zone])
   @@index([sessionId, zone])
 }
 
