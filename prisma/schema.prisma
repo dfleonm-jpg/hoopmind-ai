@@ -1,0 +1,170 @@
+// HoopMind AI — Prisma schema (see .kiro/specs/hoopmind-ai/design.md)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Position {
+  PG
+  SG
+  SF
+  PF
+  C
+}
+
+enum PlayFormat {
+  FIVE_V_FIVE
+  THREE_X_THREE
+}
+
+enum Handedness {
+  LEFT
+  RIGHT
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum Goal {
+  SHOOTING
+  BALL_HANDLING
+  VERTICAL
+  DEFENSE
+}
+
+enum Scenario {
+  FULL_COURT
+  HALF_COURT
+  STREET
+  GYM_NO_HOOP
+}
+
+enum BlockType {
+  WARMUP
+  TECHNIQUE
+  FINISHING
+  CONDITIONING
+  COOLDOWN
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+// Usuario = identidad de Supabase Auth (auth.users.id). No se almacena contraseña aquí.
+model User {
+  id        String    @id @db.Uuid // = auth.uid()
+  email     String    @unique
+  createdAt DateTime  @default(now())
+  profile   Profile?
+  workouts  Workout[]
+  sessions  Session[]
+}
+
+model Profile {
+  id         String     @id @default(uuid()) @db.Uuid
+  userId     String     @unique @db.Uuid
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  heightCm   Int // 120–240
+  weightKg   Int // 30–200
+  position   Position
+  format     PlayFormat
+  handedness Handedness
+  level      SkillLevel
+  goals      Goal[] // 1–4
+  isComplete Boolean    @default(false)
+  updatedAt  DateTime   @updatedAt
+}
+
+model Workout {
+  id          String         @id @default(uuid()) @db.Uuid
+  userId      String         @db.Uuid
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  scenario    Scenario
+  durationMin Int // 30 | 45 | 60
+  difficulty  Int            @default(3) // 1–5, ajustado progresivamente
+  content     Json // WorkoutSchema validado (fuente de verdad)
+  createdAt   DateTime       @default(now())
+  blocks      WorkoutBlock[]
+  sessions    Session[]
+
+  @@index([userId, createdAt])
+}
+
+// Normalización ligera para consulta/listado; el Json de Workout mantiene el detalle completo.
+model WorkoutBlock {
+  id          String     @id @default(uuid()) @db.Uuid
+  workoutId   String     @db.Uuid
+  workout     Workout    @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  type        BlockType
+  order       Int
+  durationMin Int
+  exercises   Exercise[]
+}
+
+model Exercise {
+  id          String       @id @default(uuid()) @db.Uuid
+  blockId     String       @db.Uuid
+  block       WorkoutBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  order       Int
+  name        String
+  description String
+  reps        String? // p. ej. "3x10" o "5 min"
+  drillId     String? // referencia a drill precargado para la pizarra
+  shotLogs    ShotLog[]
+}
+
+model Session {
+  id            String         @id @default(uuid()) @db.Uuid
+  userId        String         @db.Uuid
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutId     String         @db.Uuid
+  workout       Workout        @relation(fields: [workoutId], references: [id])
+  status        SessionStatus  @default(IN_PROGRESS)
+  startedAt     DateTime       @default(now())
+  endedAt       DateTime?
+  realDurationS Int?
+  shotLogs      ShotLog[]
+  shotAnalyses  ShotAnalysis[]
+
+  @@index([userId, startedAt])
+}
+
+// Agregado de tiros por ejercicio y zona dentro de una sesión.
+model ShotLog {
+  id         String    @id @default(uuid()) @db.Uuid
+  sessionId  String    @db.Uuid
+  session    Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exerciseId String?   @db.Uuid
+  exercise   Exercise? @relation(fields: [exerciseId], references: [id])
+  zone       String // id de zona (ver Shot chart)
+  made       Int       @default(0)
+  attempted  Int       @default(0)
+  createdAt  DateTime  @default(now())
+
+  @@index([sessionId, zone])
+}
+
+// Resultado del analizador de tiro por cámara (métricas, nunca el video).
+model ShotAnalysis {
+  id          String   @id @default(uuid()) @db.Uuid
+  sessionId   String?  @db.Uuid
+  session     Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  elbowAngle  Float // grados
+  kneeFlexion Float // grados
+  releaseMs   Int // momento de liberación relativo
+  confidence  Float // 0–1
+  createdAt   DateTime @default(now())
+}
