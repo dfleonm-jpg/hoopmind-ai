@@ -45,11 +45,9 @@ export async function POST(request: Request) {
     );
   }
   const input = parsed.data;
-  // Optional, additive flag (doesn't affect the strict core schema).
+  // PHYSICAL_ONLY implies a physical emphasis and maps to a no-hoop stored scenario.
   const includePhysical =
-    typeof body === "object" &&
-    body !== null &&
-    (body as { includePhysical?: unknown }).includePhysical === true;
+    input.includePhysical === true || input.scenario === "PHYSICAL_ONLY";
 
   // Profile is required to tailor the session.
   const profile = await prisma.profile.findUnique({
@@ -108,12 +106,16 @@ export async function POST(request: Request) {
     );
   }
 
+  // PHYSICAL_ONLY isn't a DB enum value; store as GYM_NO_HOOP (no hoop needed).
+  const storedScenario =
+    input.scenario === "PHYSICAL_ONLY" ? "GYM_NO_HOOP" : input.scenario;
+
   // Persist Workout + normalized blocks/exercises; content keeps the full JSON.
   const created = await prisma.workout.create({
     data: {
       userId: user.id,
       title: workout.title,
-      scenario: input.scenario,
+      scenario: storedScenario,
       format: profile.format,
       durationMin: input.durationMin,
       difficulty,

@@ -64,12 +64,14 @@ enum SessionStatus {
 
 // Usuario = identidad de Supabase Auth (auth.users.id). No se almacena contraseña aquí.
 model User {
-  id        String    @id @db.Uuid // = auth.uid()
-  email     String    @unique
-  createdAt DateTime  @default(now())
-  profile   Profile?
-  workouts  Workout[]
-  sessions  Session[]
+  id             String          @id @db.Uuid // = auth.uid()
+  email          String          @unique
+  createdAt      DateTime        @default(now())
+  profile        Profile?
+  workouts       Workout[]
+  sessions       Session[]
+  customPlays    CustomPlay[]
+  combineResults CombineResult[]
 }
 
 model Profile {
@@ -184,4 +186,42 @@ model ShotAnalysis {
   releaseMs   Int // momento de liberación relativo
   confidence  Float // 0–1
   createdAt   DateTime @default(now())
+}
+
+// v3: Combine test categories.
+enum CombineTest {
+  FIFTY_THREES
+  HANDLE_FINISH
+  CLUTCH_FT
+}
+
+// v3: user-authored plays saved to the personal playbook.
+model CustomPlay {
+  id        String     @id @default(uuid()) @db.Uuid
+  userId    String     @db.Uuid
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  format    PlayFormat
+  category  String
+  steps     Json // DrillStep[] in normalized coords
+  keyCues   String[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([userId])
+}
+
+// v3: results of the official Combine tests.
+model CombineResult {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @db.Uuid
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testType  CombineTest
+  score     Int
+  maxScore  Int
+  durationS Int
+  ovrDelta  Int
+  createdAt DateTime    @default(now())
+
+  @@index([userId])
 }

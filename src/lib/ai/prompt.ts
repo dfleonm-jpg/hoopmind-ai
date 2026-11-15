@@ -30,13 +30,26 @@ const SCENARIO_ES: Record<GenerateWorkoutInput["scenario"], string> = {
   FULL_COURT: "cancha completa (con aro)",
   HALF_COURT: "media cancha (con aro)",
   STREET: "calle/parque",
-  GYM_NO_HOOP: "gimnasio sin aro",
+  GYM_NO_HOOP: "gimnasio sin aro (solo balón)",
+  PHYSICAL_ONLY: "físico / explosividad (sin balón ni aro)",
 };
 
 /** Scenarios where no basket is available for shooting (Req. 3.5). */
 function hasHoop(scenario: GenerateWorkoutInput["scenario"]): boolean {
   return scenario === "FULL_COURT" || scenario === "HALF_COURT";
 }
+
+const READINESS_RULES: Record<string, string[]> = {
+  FRESH: [
+    "El jugador está al 100%: puedes exigir alta intensidad y mayor volumen en técnica, finalización y acondicionamiento.",
+  ],
+  FATIGUED: [
+    "El jugador tiene las piernas pesadas: reduce el volumen total ~25%, baja la pliometría y los sprints, aumenta los descansos entre series y prioriza técnica de calidad sobre cantidad.",
+  ],
+  RECOVERY: [
+    "El jugador está en recuperación: sesión suave de bajo impacto (movilidad, mecánica en seco, tiro sin salto agresivo, core ligero). EVITA saltos máximos, cambios de dirección explosivos y alto volumen; protege rodillas, tobillos y cadera.",
+  ],
+};
 
 export const SYSTEM_PROMPT = `Eres un entrenador profesional de baloncesto que diseña sesiones de entrenamiento individuales.
 Devuelves ÚNICAMENTE una sesión estructurada que cumple el esquema proporcionado. No añadas texto fuera del objeto.
@@ -78,15 +91,32 @@ export function buildWorkoutPrompt(
           "Combina técnica individual con patrones aplicables a situaciones de equipo.",
         ];
 
-  const scenarioRules = hoop
-    ? [
-        `Escenario: ${SCENARIO_ES[input.scenario]}. Puedes incluir finalizaciones y tiros a canasta.`,
-      ]
-    : [
-        `Escenario: ${SCENARIO_ES[input.scenario]} SIN ARO. PROHIBIDO cualquier ejercicio que requiera canasta (nada de tiros a aro, bandejas ni finalizaciones al aro).`,
-        "Sustituye el trabajo de tiro por: mecánica de tiro en seco (form shooting contra pared o al aire), manejo de balón, trabajo de pies, cambios de ritmo/dirección y acondicionamiento.",
-        "El bloque FINISHING debe centrarse en finalizaciones simuladas sin aro (ataque de un cono/defensor imaginario, euro-step y recogida) y toma de decisión, no en encestar.",
-      ];
+  const scenarioRules =
+    input.scenario === "PHYSICAL_ONLY"
+      ? [
+          `Escenario: ${SCENARIO_ES[input.scenario]}. Sesión de preparación física SIN balón ni aro.`,
+          "Todos los bloques se orientan a físico: TECHNIQUE y FINISHING se reinterpretan como trabajo de pies, mecánica de salto y coordinación; CONDITIONING incluye potencia vertical (pliometría), agilidad lateral y core; WARMUP con movilidad y activación; COOLDOWN con estiramientos.",
+          "PROHIBIDO cualquier ejercicio con balón o canasta.",
+        ]
+      : hoop
+        ? [
+            `Escenario: ${SCENARIO_ES[input.scenario]}. Puedes incluir finalizaciones y tiros a canasta.`,
+          ]
+        : [
+            `Escenario: ${SCENARIO_ES[input.scenario]} SIN ARO. PROHIBIDO cualquier ejercicio que requiera canasta (nada de tiros a aro, bandejas ni finalizaciones al aro).`,
+            "Sustituye el trabajo de tiro por: mecánica de tiro en seco (form shooting contra pared o al aire), manejo de balón, trabajo de pies, cambios de ritmo/dirección y acondicionamiento.",
+            "El bloque FINISHING debe centrarse en finalizaciones simuladas sin aro (ataque de un cono/defensor imaginario, euro-step y recogida) y toma de decisión, no en encestar.",
+          ];
+
+  // Readiness (v3): calibrate volume, rest and joint protection.
+  const readinessRules = input.readiness
+    ? (READINESS_RULES[input.readiness] ?? [])
+    : [];
+  if (input.readiness === "RECOVERY" || input.readiness === "FATIGUED") {
+    readinessRules.push(
+      `Protege las articulaciones según el físico (${profile.heightCm} cm, ${profile.weightKg} kg): cuanto más alto/pesado, más cuidado con rodillas, tobillos y cadera en impactos y aterrizajes.`,
+    );
+  }
 
   // Performance memory (v2): steer the session toward the coldest zones.
   const diagnosisRules: string[] = [];

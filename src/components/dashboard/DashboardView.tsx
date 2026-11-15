@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/toast";
 import { ShotChart, type ZoneStat } from "./ShotChart";
 import { StreakCard } from "./StreakCard";
 import { ScoutingCard, type Gamification } from "./ScoutingCard";
+import { QuickStartDrawer } from "./QuickStartDrawer";
 
 interface Stats {
   zones: ZoneStat[];
@@ -115,7 +116,10 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Generate workout (uses suggestedDifficulty server-side) */}
+      {/* Quick-Start: hero "ENTRENAR YA" (v3) */}
+      <QuickStartDrawer />
+
+      {/* Generate workout (detailed controls) */}
       <Card variant="glass" className="flex flex-col gap-3">
         <CardTitle>Generar rutina con IA</CardTitle>
         <CardDescription>

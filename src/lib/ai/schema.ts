@@ -45,7 +45,8 @@ export const WorkoutSchema = z
   .object({
     title: z.string().min(3).max(80),
     summary: z.string().min(10).max(300),
-    totalDurationMin: z.number().int().min(28).max(62),
+    // Floor 13 accommodates the v3 Quick-Start 15m session (±2 tolerance).
+    totalDurationMin: z.number().int().min(13).max(62),
     blocks: z.array(BlockSchema).length(5),
   })
   // Enforce the exact canonical order of the five phases (Req. 3.3).
@@ -76,10 +77,25 @@ export const SwapExerciseSchema = z.object({
 });
 export type SwapExercise = z.infer<typeof SwapExerciseSchema>;
 
-/** Input accepted by POST /api/generate-workout (Req. 3.1). */
+/** Input accepted by POST /api/generate-workout (Req. 3.1, extended in v3). */
 export const GenerateWorkoutInput = z.object({
-  durationMin: z.union([z.literal(30), z.literal(45), z.literal(60)]),
-  scenario: z.enum(["FULL_COURT", "HALF_COURT", "STREET", "GYM_NO_HOOP"]),
+  // v3 Quick-Start adds 15m; PHYSICAL_ONLY is a scenario for pure physical work.
+  durationMin: z.union([
+    z.literal(15),
+    z.literal(30),
+    z.literal(45),
+    z.literal(60),
+  ]),
+  scenario: z.enum([
+    "FULL_COURT",
+    "HALF_COURT",
+    "STREET",
+    "GYM_NO_HOOP",
+    "PHYSICAL_ONLY",
+  ]),
+  // Player readiness today; calibrates volume, rest and joint protection.
+  readiness: z.enum(["FRESH", "FATIGUED", "RECOVERY"]).optional(),
+  includePhysical: z.boolean().optional(),
 });
 
 export type GenerateWorkoutInput = z.infer<typeof GenerateWorkoutInput>;

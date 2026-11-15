@@ -9,7 +9,7 @@
 @theme {
   /* Surfaces */
   --color-bg: #0a0a0c;
-  --color-card: #141418;
+  --color-card: #121216;
   --color-border: #26262c;
 
   /* Text */
@@ -25,6 +25,9 @@
   --color-success: #22c55e;
   --color-success-dim: #16a34a;
   --color-danger: #ef4444;
+
+  /* Telemetry / data accent (v3) */
+  --color-telemetry: #38bdf8;
 
   /* Fonts */
   --font-sans: var(--font-geist-sans);
@@ -71,7 +74,7 @@ body {
   background-color: color-mix(in srgb, var(--color-card) 90%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgb(255 255 255 / 0.08);
+  border: 1px solid rgb(255 255 255 / 0.1);
 }
 
 /* Loading skeleton shimmer */

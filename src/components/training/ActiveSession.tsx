@@ -10,7 +10,13 @@ import { Card } from "@/components/ui/card";
 import { TacticBoard } from "@/components/tactic-board/TacticBoard";
 import { BlockTimer } from "./BlockTimer";
 import { ShotCounter } from "./ShotCounter";
+import { ShotClock } from "./ShotClock";
 import { playCue, toggleMuted } from "@/lib/audio/feedback";
+import { speak, setVoiceEnabled, cancelVoice } from "@/lib/audio/voice";
+import {
+  isVoiceInputSupported,
+  startVoiceShotLogging,
+} from "@/lib/audio/voice-input";
 import { sendOrQueue } from "@/lib/offline/sync-queue";
 import { useToast } from "@/components/ui/toast";
 
@@ -71,9 +77,65 @@ export function ActiveSession({
     Record<string, { name: string; description: string; reps: string }>
   >({});
 
+  // Coach voice + hands-free voice logging + shot clock (v3).
+  const [voiceOn, setVoiceOn] = React.useState(true);
+  const [listening, setListening] = React.useState(false);
+  const [showShotClock, setShowShotClock] = React.useState(false);
+  const stopListenRef = React.useRef<(() => void) | null>(null);
+  const voiceInputSupported = isVoiceInputSupported();
+  // Current (exercise index, zone) for voice input, kept fresh via an effect.
+  const shotCtxRef = React.useRef<{ exIndex: number; zone: string }>({
+    exIndex: 0,
+    zone: "free_throw",
+  });
+
+  // Keep the voice-input shot context in sync (no refs touched during render).
+  React.useEffect(() => {
+    const exIndex =
+      exerciseIds.slice(0, blockIdx).reduce((sum, arr) => sum + arr.length, 0) +
+      exIdx;
+    shotCtxRef.current = { exIndex, zone };
+  }, [blockIdx, exIdx, zone, exerciseIds]);
+
+  // Apply a shot from any source (buttons or voice) using the live context.
+  const applyShot = React.useCallback((made: boolean) => {
+    const { exIndex, zone: z } = shotCtxRef.current;
+    const key = `${exIndex}:${z}`;
+    setShots((prev) => {
+      const existing = prev[key] ?? { exIndex, zone: z, made: 0, attempted: 0 };
+      return {
+        ...prev,
+        [key]: {
+          ...existing,
+          attempted: existing.attempted + 1,
+          made: existing.made + (made ? 1 : 0),
+        },
+      };
+    });
+  }, []);
+
   // Record the session start time once, outside render (lint: no impure calls in render).
   React.useEffect(() => {
     startedAtRef.current = Date.now();
+  }, []);
+
+  // Announce the current block/exercise with the coach voice on change (v3).
+  React.useEffect(() => {
+    if (!content || !voiceOn) return;
+    const b = content.blocks[blockIdx];
+    const ex = b?.exercises[exIdx];
+    if (!b || !ex) return;
+    const blockName = BLOCK_LABELS[b.type] ?? b.type;
+    speak(`${blockName}. ${ex.name}.`, { interrupt: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blockIdx, exIdx, voiceOn]);
+
+  // Stop listening + cancel voice on unmount.
+  React.useEffect(() => {
+    return () => {
+      stopListenRef.current?.();
+      cancelVoice();
+    };
   }, []);
 
   // Create the session once on mount.
@@ -165,19 +227,34 @@ export function ActiveSession({
   const currentAgg = shots[currentKey];
 
   function recordShot(made: boolean) {
-    setShots((prev) => {
-      const existing =
-        prev[currentKey] ??
-        { exIndex: globalExIndex, zone, made: 0, attempted: 0 };
-      return {
-        ...prev,
-        [currentKey]: {
-          ...existing,
-          attempted: existing.attempted + 1,
-          made: existing.made + (made ? 1 : 0),
-        },
-      };
+    applyShot(made);
+  }
+
+  function toggleVoiceCoach() {
+    const next = !voiceOn;
+    setVoiceOn(next);
+    setVoiceEnabled(next);
+    if (!next) cancelVoice();
+  }
+
+  function toggleListening() {
+    if (listening) {
+      stopListenRef.current?.();
+      stopListenRef.current = null;
+      setListening(false);
+      return;
+    }
+    const stop = startVoiceShotLogging((word) => {
+      applyShot(word === "made");
+      playCue(word === "made" ? "made" : "attempt");
     });
+    if (!stop) {
+      toast("El reconocimiento de voz no está disponible.", "error");
+      return;
+    }
+    stopListenRef.current = stop;
+    setListening(true);
+    toast('Di "encestado" o "fallado".', "info");
   }
 
   function nextExercise() {
@@ -320,18 +397,43 @@ export function ActiveSession({
           </p>
           <h1 className="text-fg truncate text-xl font-bold">{title}</h1>
         </div>
-        <Button
-          variant="ghost"
-          className="px-3"
-          aria-label={muted ? "Activar sonido" : "Silenciar"}
-          onClick={() => {
-            const m = toggleMuted();
-            setMutedState(m);
-          }}
-        >
-          {muted ? "🔇" : "🔊"}
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            variant="ghost"
+            className="px-3"
+            aria-label={voiceOn ? "Silenciar voz del entrenador" : "Activar voz del entrenador"}
+            aria-pressed={voiceOn}
+            onClick={toggleVoiceCoach}
+          >
+            {voiceOn ? "🗣️" : "🤐"}
+          </Button>
+          <Button
+            variant="ghost"
+            className="px-3"
+            aria-label={muted ? "Activar sonido" : "Silenciar"}
+            onClick={() => {
+              const m = toggleMuted();
+              setMutedState(m);
+            }}
+          >
+            {muted ? "🔇" : "🔊"}
+          </Button>
+        </div>
       </div>
+
+      {/* Shot clock toggle */}
+      <Button
+        variant={showShotClock ? "primary" : "secondary"}
+        className="w-full"
+        onClick={() => setShowShotClock((v) => !v)}
+      >
+        {showShotClock ? "Ocultar reloj de posesión" : "Reloj de posesión (24s/12s)"}
+      </Button>
+      {showShotClock ? (
+        <Card className="flex flex-col gap-2">
+          <ShotClock muted={muted} />
+        </Card>
+      ) : null}
 
       {/* Timer */}
       <Card className="flex flex-col gap-4">
@@ -340,6 +442,12 @@ export function ActiveSession({
           durationS={block.durationMin * 60}
           running={running}
           onComplete={handleBlockTimeUp}
+          onHalf={() => {
+            if (voiceOn) speak("Mitad del bloque. Mantén la intensidad.");
+          }}
+          onCountdown={(s) => {
+            if (voiceOn) speak(String(s), { interrupt: true });
+          }}
         />
         <div className="flex gap-2">
           {running ? (
@@ -388,7 +496,7 @@ export function ActiveSession({
       </Card>
 
       {/* Shot counter */}
-      <Card>
+      <Card className="flex flex-col gap-3">
         <ShotCounter
           made={currentAgg?.made ?? 0}
           attempted={currentAgg?.attempted ?? 0}
@@ -397,6 +505,16 @@ export function ActiveSession({
           onMade={() => recordShot(true)}
           onAttempt={() => recordShot(false)}
         />
+        {voiceInputSupported ? (
+          <Button
+            variant={listening ? "primary" : "secondary"}
+            className="w-full"
+            onClick={toggleListening}
+            aria-pressed={listening}
+          >
+            {listening ? "🎙️ Escuchando… (tocar para parar)" : "🎙️ Registrar por voz"}
+          </Button>
+        ) : null}
       </Card>
 
       {/* Finish actions */}
