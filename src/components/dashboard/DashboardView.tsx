@@ -12,12 +12,14 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { ShotChart, type ZoneStat } from "./ShotChart";
 import { StreakCard } from "./StreakCard";
+import { ScoutingCard, type Gamification } from "./ScoutingCard";
 
 interface Stats {
   zones: ZoneStat[];
   streak: { current: number; best: number };
   suggestedDifficulty: number;
   totals: { made: number; attempted: number; pct: number };
+  gamification?: Gamification;
 }
 
 interface WorkoutItem {
@@ -48,6 +50,7 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
 
   const [duration, setDuration] = React.useState<30 | 45 | 60>(45);
   const [scenario, setScenario] = React.useState<Scenario>("HALF_COURT");
+  const [includePhysical, setIncludePhysical] = React.useState(false);
   const [generating, setGenerating] = React.useState(false);
   const [genError, setGenError] = React.useState<string | null>(null);
 
@@ -84,7 +87,11 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
       const res = await fetch("/api/generate-workout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ durationMin: duration, scenario }),
+        body: JSON.stringify({
+          durationMin: duration,
+          scenario,
+          includePhysical,
+        }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as {
@@ -142,6 +149,30 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
               </option>
             ))}
           </select>
+
+          {/* Explosive-physical block toggle (v2 Block 4) */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={includePhysical}
+            onClick={() => setIncludePhysical((v) => !v)}
+            className="border-border flex min-h-touch items-center justify-between gap-3 rounded-xl border px-3"
+          >
+            <span className="text-fg text-left text-sm">
+              Añadir potencia vertical / agilidad / core
+            </span>
+            <span
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                includePhysical ? "bg-accent" : "bg-border"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
+                  includePhysical ? "left-[22px]" : "left-0.5"
+                }`}
+              />
+            </span>
+          </button>
         </div>
 
         {genError ? (
@@ -157,6 +188,11 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
           {generating ? "Generando…" : "Generar y entrenar"}
         </Button>
       </Card>
+
+      {/* Scouting card (XP / level / archetype / badges) */}
+      {!loadingStats && stats?.gamification ? (
+        <ScoutingCard data={stats.gamification} />
+      ) : null}
 
       {/* Streaks */}
       {loadingStats ? (

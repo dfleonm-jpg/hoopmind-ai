@@ -3,6 +3,12 @@ import { getAuthUser } from "@/lib/supabase/auth";
 import { prisma } from "@/lib/db/prisma";
 import { unauthorized } from "@/lib/api/respond";
 import { ZONE_IDS } from "@/lib/validation/session";
+import { levelProgress } from "@/lib/gamification/xp";
+import {
+  resolveArchetype,
+  resolveBadges,
+  splitZonePerf,
+} from "@/lib/gamification/archetype";
 
 type PlayFormat = "FIVE_V_FIVE" | "THREE_X_THREE";
 
@@ -66,12 +72,94 @@ export async function GET(request: Request) {
   const overallPct = totalAtt > 0 ? totalMade / totalAtt : 0;
   const completedCount = sessions.filter((s) => s.status === "COMPLETED").length;
 
+  // --- Gamification (career-wide, not affected by UI filters) ---
+  const gamification = await buildGamification(user.id, { current, best });
+
   return NextResponse.json({
     zones,
     streak: { current, best },
     suggestedDifficulty: suggestDifficulty(overallPct, completedCount),
     totals: { made: totalMade, attempted: totalAtt, pct: Math.round(overallPct * 100) / 100 },
+    gamification,
   });
+}
+
+async function buildGamification(
+  userId: string,
+  streak: { current: number; best: number },
+) {
+  const [profile, allSessions, analysesCount] = await Promise.all([
+    prisma.profile.findUnique({
+      where: { userId },
+      select: { xp: true, gameLevel: true },
+    }),
+    prisma.session.findMany({
+      where: { userId },
+      select: {
+        status: true,
+        workout: { select: { format: true } },
+        shotLogs: { select: { zone: true, made: true, attempted: true } },
+      },
+    }),
+    prisma.shotAnalysis.count({ where: { session: { userId } } }),
+  ]);
+
+  // Career zone aggregates.
+  const careerZones = new Map<string, { made: number; attempted: number }>();
+  for (const z of ZONE_IDS) careerZones.set(z, { made: 0, attempted: 0 });
+  for (const s of allSessions) {
+    for (const log of s.shotLogs) {
+      const acc = careerZones.get(log.zone) ?? { made: 0, attempted: 0 };
+      acc.made += log.made;
+      acc.attempted += log.attempted;
+      careerZones.set(log.zone, acc);
+    }
+  }
+  const zoneArr = Array.from(careerZones.entries()).map(([zone, v]) => ({
+    zone,
+    made: v.made,
+    attempted: v.attempted,
+    pct: v.attempted > 0 ? v.made / v.attempted : 0,
+  }));
+
+  const split = splitZonePerf(zoneArr);
+  const totalCompleted = allSessions.filter((s) => s.status === "COMPLETED").length;
+  const threeXThreeCompleted = allSessions.filter(
+    (s) => s.status === "COMPLETED" && s.workout.format === "THREE_X_THREE",
+  ).length;
+  const threeMade = zoneArr
+    .filter((z) => z.zone.endsWith("_3"))
+    .reduce((s, z) => s + z.made, 0);
+
+  const archetype = resolveArchetype({
+    zones: zoneArr,
+    ...split,
+    threeXThreeSessions: threeXThreeCompleted,
+    totalCompleted,
+  });
+
+  const badges = resolveBadges({
+    totalCompleted,
+    bestStreak: streak.best,
+    threeMade,
+    threePct: split.threePct,
+    threeAttempts: split.threeAttempts,
+    analysesCount,
+    threeXThreeCompleted,
+  });
+
+  const xp = profile?.xp ?? 0;
+  const progress = levelProgress(xp);
+
+  return {
+    xp,
+    level: progress.level,
+    levelProgressPct: Math.round(progress.pct * 100) / 100,
+    xpIntoLevel: progress.intoLevel,
+    xpForNext: progress.span,
+    archetype,
+    badges,
+  };
 }
 
 function parseDate(v: string | null): Date | null {
