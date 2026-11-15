@@ -29,8 +29,8 @@ export default async function AnalyzePage({
 
   return (
     <>
-      <TopHeader title="Form Check" subtitle="Tiro y técnica de gym" />
-      <main className="mx-auto mb-bottomnav flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-5">
+      <TopHeader title="Lab de técnica" subtitle="Tiro, gym y ball handling" />
+      <main className="mx-auto mb-bottomnav flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-5">
         <AnalyzeClient sessionId={session} femurClass={femurClass} />
       </main>
     </>

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import type { MuscleGroup } from "@/lib/gym/catalog";
 
 export type RecoveryState = "FRESH" | "WORKED" | "FATIGUED";
@@ -13,29 +14,90 @@ export interface MuscleRecovery {
 
 interface Region {
   muscle: MuscleGroup;
-  /** SVG path for the region on the active view. */
+  /** One or more SVG paths (left/right) for this region in the active view. */
   d: string;
+  label: string;
 }
 
-// Simplified anatomical regions. viewBox 0 0 200 420. Front and back views.
+/*
+ * Anatomically detailed front/back body map. viewBox 0 0 240 520.
+ * Paths are hand-tuned to read as real muscle bellies (mirrored L/R where
+ * applicable). Centered figure; shoulders at ~y90, hips ~y250, feet ~y500.
+ */
 const FRONT: Region[] = [
-  { muscle: "SHOULDERS", d: "M62 96 q-16 2 -20 18 q14 -6 24 -4 z M138 96 q16 2 20 18 q-14 -6 -24 -4 z" },
-  { muscle: "CHEST", d: "M74 100 h52 q6 20 -4 34 q-22 8 -44 0 q-10 -14 -4 -34 z" },
-  { muscle: "BICEPS", d: "M52 118 q-8 20 -4 42 q10 -2 14 -10 q-2 -20 -2 -34 z M148 118 q8 20 4 42 q-10 -2 -14 -10 q2 -20 2 -34 z" },
-  { muscle: "FOREARMS", d: "M44 162 q-6 24 -4 44 q10 -2 14 -8 q0 -22 -2 -40 z M156 162 q6 24 4 44 q-10 -2 -14 -8 q0 -22 2 -40 z" },
-  { muscle: "CORE", d: "M80 136 h40 q4 34 -2 58 q-18 8 -36 0 q-6 -24 -2 -58 z" },
-  { muscle: "QUADS", d: "M74 200 q-6 50 2 92 q16 6 22 0 q2 -46 0 -92 z M126 200 q6 50 -2 92 q-16 6 -22 0 q-2 -46 0 -92 z" },
-  { muscle: "CALVES", d: "M80 300 q-4 40 2 70 q10 4 16 0 q2 -36 0 -70 z M120 300 q4 40 -2 70 q-10 4 -16 0 q-2 -36 0 -70 z" },
+  {
+    muscle: "SHOULDERS",
+    label: "Hombros",
+    d: "M78 108 q-20 0 -28 18 q-4 12 2 22 q14 -14 30 -14 q0 -14 -4 -26z M162 108 q20 0 28 18 q4 12 -2 22 q-14 -14 -30 -14 q0 -14 4 -26z",
+  },
+  {
+    muscle: "CHEST",
+    label: "Pecho",
+    d: "M86 112 q28 -8 34 2 v34 q-18 10 -38 2 q-8 -24 4 -38z M154 112 q-28 -8 -34 2 v34 q18 10 38 2 q8 -24 -4 -38z",
+  },
+  {
+    muscle: "BICEPS",
+    label: "Bíceps",
+    d: "M58 150 q-10 24 -6 50 q10 -2 16 -10 q0 -24 -2 -42 q-4 0 -8 2z M182 150 q10 24 6 50 q-10 -2 -16 -10 q0 -24 2 -42 q4 0 8 2z",
+  },
+  {
+    muscle: "FOREARMS",
+    label: "Antebrazos",
+    d: "M50 202 q-8 28 -4 54 q10 -2 16 -10 q0 -26 -4 -46 q-4 0 -8 2z M190 202 q8 28 4 54 q-10 -2 -16 -10 q0 -26 4 -46 q4 0 8 2z",
+  },
+  {
+    muscle: "CORE",
+    label: "Core",
+    d: "M98 156 h44 q6 42 -4 76 q-18 10 -36 0 q-10 -34 -4 -76z",
+  },
+  {
+    muscle: "QUADS",
+    label: "Cuádriceps",
+    d: "M92 252 q-10 58 0 112 q18 8 26 0 q6 -56 2 -110 q-14 -6 -28 -2z M148 252 q10 58 0 112 q-18 8 -26 0 q-6 -56 -2 -110 q14 -6 28 -2z",
+  },
+  {
+    muscle: "CALVES",
+    label: "Gemelos",
+    d: "M96 372 q-6 48 2 86 q12 4 20 0 q4 -44 0 -86 q-12 -4 -22 0z M144 372 q6 48 -2 86 q-12 4 -20 0 q-4 -44 0 -86 q12 -4 22 0z",
+  },
 ];
 
 const BACK: Region[] = [
-  { muscle: "SHOULDERS", d: "M62 96 q-16 2 -20 18 q14 -6 24 -4 z M138 96 q16 2 20 18 q-14 -6 -24 -4 z" },
-  { muscle: "BACK", d: "M74 100 h52 q8 46 -4 82 q-22 8 -44 0 q-12 -36 -4 -82 z" },
-  { muscle: "TRICEPS", d: "M52 118 q-8 20 -4 42 q10 -2 14 -10 q-2 -20 -2 -34 z M148 118 q8 20 4 42 q-10 -2 -14 -10 q2 -20 2 -34 z" },
-  { muscle: "FOREARMS", d: "M44 162 q-6 24 -4 44 q10 -2 14 -8 q0 -22 -2 -40 z M156 162 q6 24 4 44 q-10 -2 -14 -8 q0 -22 2 -40 z" },
-  { muscle: "GLUTES", d: "M78 190 h44 q6 20 0 34 q-22 10 -44 0 q-6 -14 0 -34 z" },
-  { muscle: "HAMSTRINGS", d: "M76 226 q-4 44 2 74 q14 6 20 0 q2 -38 0 -74 z M124 226 q4 44 -2 74 q-14 6 -20 0 q-2 -38 0 -74 z" },
-  { muscle: "CALVES", d: "M80 304 q-4 38 2 66 q10 4 16 0 q2 -34 0 -66 z M120 304 q4 38 -2 66 q-10 4 -16 0 q-2 -34 0 -66 z" },
+  {
+    muscle: "SHOULDERS",
+    label: "Hombros / Trapecio",
+    d: "M78 106 q-20 2 -28 20 q-4 12 2 22 q14 -14 30 -14 q0 -16 -4 -28z M162 106 q20 2 28 20 q4 12 -2 22 q-14 -14 -30 -14 q0 -16 4 -28z M100 100 q20 -8 40 0 q-4 16 -20 18 q-16 -2 -20 -18z",
+  },
+  {
+    muscle: "BACK",
+    label: "Espalda / Dorsal",
+    d: "M86 122 q34 -6 68 0 q10 50 -6 96 q-28 12 -56 0 q-16 -46 -6 -96z",
+  },
+  {
+    muscle: "TRICEPS",
+    label: "Tríceps",
+    d: "M58 150 q-10 26 -6 52 q10 -2 16 -12 q0 -24 -2 -42 q-4 0 -8 2z M182 150 q10 26 6 52 q-10 -2 -16 -12 q0 -24 2 -42 q4 0 8 2z",
+  },
+  {
+    muscle: "FOREARMS",
+    label: "Antebrazos",
+    d: "M50 204 q-8 28 -4 54 q10 -2 16 -10 q0 -26 -4 -46 q-4 0 -8 2z M190 204 q8 28 4 54 q-10 -2 -16 -10 q0 -26 4 -46 q4 0 8 2z",
+  },
+  {
+    muscle: "GLUTES",
+    label: "Glúteos",
+    d: "M94 228 q24 -8 52 0 q8 22 0 42 q-26 12 -52 0 q-8 -20 0 -42z",
+  },
+  {
+    muscle: "HAMSTRINGS",
+    label: "Isquiotibiales",
+    d: "M94 276 q-8 52 0 92 q18 8 26 0 q4 -46 0 -92 q-14 -4 -26 0z M146 276 q8 52 0 92 q-18 8 -26 0 q-4 -46 0 -92 q14 -4 26 0z",
+  },
+  {
+    muscle: "CALVES",
+    label: "Gemelos",
+    d: "M96 376 q-6 46 2 84 q12 4 20 0 q4 -42 0 -84 q-12 -4 -22 0z M144 376 q6 46 -2 84 q-12 4 -20 0 q-4 -42 0 -84 q12 -4 22 0z",
+  },
 ];
 
 const STATE_COLOR: Record<RecoveryState, string> = {
@@ -43,17 +105,30 @@ const STATE_COLOR: Record<RecoveryState, string> = {
   WORKED: "var(--color-telemetry)",
   FATIGUED: "var(--color-accent)",
 };
+const STATE_LABEL: Record<RecoveryState, string> = {
+  FRESH: "Fresco · listo",
+  WORKED: "Trabajado",
+  FATIGUED: "Fatigado · descansa",
+};
 
-/** Body silhouette outline (neutral), same for both views. */
+/** Clean body silhouette outline (head, torso, limbs). */
 function Silhouette() {
   return (
-    <g fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth={2}>
-      <circle cx={100} cy={56} r={26} />
-      <path d="M62 96 q38 -16 76 0 q10 60 -4 110 q-34 14 -68 0 q-14 -50 -4 -110 z" />
-      <path d="M48 116 q-14 46 -8 92" />
-      <path d="M152 116 q14 46 8 92" />
-      <path d="M74 200 q-8 100 4 172" />
-      <path d="M126 200 q8 100 -4 172" />
+    <g fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth={2.5} strokeLinejoin="round">
+      {/* head + neck */}
+      <circle cx={120} cy={62} r={30} />
+      <path d="M108 90 q12 8 24 0" />
+      {/* torso */}
+      <path d="M78 106 q42 -18 84 0 q14 72 -4 140 q-38 16 -76 0 q-18 -68 -4 -140z" />
+      {/* arms */}
+      <path d="M62 120 q-18 44 -12 140" />
+      <path d="M178 120 q18 44 12 140" />
+      {/* legs */}
+      <path d="M92 250 q-10 130 4 212" />
+      <path d="M148 250 q10 130 -4 212" />
+      {/* feet */}
+      <path d="M94 460 q-2 16 2 24 h18 q2 -14 -2 -22" />
+      <path d="M146 460 q2 16 -2 24 h-18 q-2 -14 2 -22" />
     </g>
   );
 }
@@ -67,6 +142,7 @@ export function BodySkeletonSVG({
   selected: MuscleGroup | null;
   onSelect: (m: MuscleGroup) => void;
 }) {
+  const reduce = useReducedMotion();
   const [view, setView] = React.useState<"front" | "back">("front");
   const regions = view === "front" ? FRONT : BACK;
   const byMuscle = React.useMemo(
@@ -75,33 +151,31 @@ export function BodySkeletonSVG({
   );
 
   function fillFor(m: MuscleGroup): string {
-    if (selected === m) return STATE_COLOR[byMuscle.get(m)?.state ?? "FRESH"];
     const rec = byMuscle.get(m);
-    if (!rec || rec.state === "FRESH") return "rgba(255,255,255,0.06)";
-    // Tint by fatigue even when not selected.
-    const base = STATE_COLOR[rec.state];
-    return base;
+    if (selected === m) return STATE_COLOR[rec?.state ?? "FRESH"];
+    if (!rec || rec.state === "FRESH") return "rgba(255,255,255,0.05)";
+    return STATE_COLOR[rec.state];
+  }
+  function opacityFor(m: MuscleGroup): number {
+    const rec = byMuscle.get(m);
+    if (selected === m) return 0.92;
+    if (!rec || rec.state === "FRESH") return 1;
+    return 0.22 + rec.fatigue * 0.5;
   }
 
-  function opacityFor(m: MuscleGroup): number {
-    if (selected === m) return 0.9;
-    const rec = byMuscle.get(m);
-    if (!rec || rec.state === "FRESH") return 1;
-    return 0.25 + rec.fatigue * 0.45;
-  }
+  const activeRec = selected ? byMuscle.get(selected) : undefined;
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex gap-2" role="group" aria-label="Vista del cuerpo">
+      {/* Front / back toggle */}
+      <div className="bg-card/60 border-border flex rounded-xl border p-1" role="group" aria-label="Vista del cuerpo">
         {(["front", "back"] as const).map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
             aria-pressed={view === v}
-            className={`min-h-touch flex-1 rounded-xl border text-sm font-semibold transition-colors ${
-              view === v
-                ? "bg-accent text-on-accent border-accent"
-                : "bg-card text-fg-muted border-border"
+            className={`min-h-touch flex-1 rounded-lg text-sm font-semibold transition-colors ${
+              view === v ? "bg-accent text-on-accent" : "text-fg-muted hover:text-fg"
             }`}
           >
             {v === "front" ? "Frontal" : "Posterior"}
@@ -109,47 +183,92 @@ export function BodySkeletonSVG({
         ))}
       </div>
 
-      <svg
-        viewBox="0 0 200 420"
-        className="mx-auto h-auto w-full max-w-[260px]"
-        role="group"
-        aria-label={`Mapa muscular ${view === "front" ? "frontal" : "posterior"}`}
-      >
-        <Silhouette />
-        {regions.map((r) => {
-          const rec = byMuscle.get(r.muscle);
-          return (
-            <path
-              key={`${view}-${r.muscle}`}
-              d={r.d}
-              fill={fillFor(r.muscle)}
-              fillOpacity={opacityFor(r.muscle)}
-              stroke={selected === r.muscle ? STATE_COLOR[rec?.state ?? "FRESH"] : "transparent"}
-              strokeWidth={selected === r.muscle ? 2.5 : 0}
-              style={{ cursor: "pointer", transition: "fill-opacity 0.2s" }}
-              onClick={() => onSelect(r.muscle)}
-              role="button"
-              aria-label={`${r.muscle}${rec ? ` · ${rec.state}` : ""}`}
-            />
-          );
-        })}
-      </svg>
+      <div className="relative">
+        {/* ambient glow when a fatigued muscle is selected */}
+        {activeRec && activeRec.state !== "FRESH" ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10 opacity-40 blur-3xl"
+            style={{ background: `radial-gradient(circle at 50% 40%, ${STATE_COLOR[activeRec.state]}, transparent 60%)` }}
+          />
+        ) : null}
 
-      {/* Recovery legend */}
+        <svg
+          viewBox="0 0 240 520"
+          className="mx-auto h-auto w-full max-w-[300px]"
+          role="group"
+          aria-label={`Mapa muscular ${view === "front" ? "frontal" : "posterior"}`}
+        >
+          <defs>
+            <filter id="muscle-glow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="3" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          <Silhouette />
+
+          {regions.map((r) => {
+            const rec = byMuscle.get(r.muscle);
+            const isSelected = selected === r.muscle;
+            const pulse = !reduce && rec?.state === "FATIGUED";
+            return (
+              <motion.path
+                key={`${view}-${r.muscle}`}
+                d={r.d}
+                fill={fillFor(r.muscle)}
+                stroke={isSelected ? STATE_COLOR[rec?.state ?? "FRESH"] : "transparent"}
+                strokeWidth={isSelected ? 2 : 0}
+                filter={isSelected || rec?.state === "FATIGUED" ? "url(#muscle-glow)" : undefined}
+                style={{ cursor: "pointer" }}
+                initial={false}
+                animate={{
+                  fillOpacity: pulse
+                    ? [opacityFor(r.muscle), opacityFor(r.muscle) + 0.18, opacityFor(r.muscle)]
+                    : opacityFor(r.muscle),
+                }}
+                transition={pulse ? { duration: 2.2, repeat: Infinity } : { duration: 0.25 }}
+                onClick={() => onSelect(r.muscle)}
+                role="button"
+                aria-label={`${r.label}${rec ? ` · ${STATE_LABEL[rec.state]}` : ""}`}
+              />
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* Selected muscle status */}
+      {activeRec ? (
+        <div
+          className="glass flex items-center justify-between rounded-xl px-3 py-2"
+          aria-live="polite"
+        >
+          <span className="text-fg text-sm font-semibold">
+            {regions.find((r) => r.muscle === selected)?.label ?? selected}
+          </span>
+          <span
+            className="flex items-center gap-1.5 text-xs font-semibold"
+            style={{ color: STATE_COLOR[activeRec.state] }}
+          >
+            <span className="h-2 w-2 rounded-full" style={{ background: STATE_COLOR[activeRec.state] }} />
+            {STATE_LABEL[activeRec.state]} · {Math.round(activeRec.fatigue * 100)}%
+          </span>
+        </div>
+      ) : (
+        <p className="text-fg-muted text-center text-xs">
+          Toca un músculo para ver su recuperación y filtrar ejercicios.
+        </p>
+      )}
+
+      {/* Legend */}
       <ul className="flex flex-wrap justify-center gap-x-4 gap-y-1">
-        {(
-          [
-            ["FRESH", "Fresco"],
-            ["WORKED", "Trabajado"],
-            ["FATIGUED", "Fatigado"],
-          ] as [RecoveryState, string][]
-        ).map(([s, label]) => (
+        {(Object.keys(STATE_COLOR) as RecoveryState[]).map((s) => (
           <li key={s} className="text-fg-muted flex items-center gap-1.5 text-xs">
-            <span
-              className="h-2.5 w-2.5 rounded-full"
-              style={{ background: STATE_COLOR[s] }}
-            />
-            {label}
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: STATE_COLOR[s] }} />
+            {s === "FRESH" ? "Fresco" : s === "WORKED" ? "Trabajado" : "Fatigado"}
           </li>
         ))}
       </ul>

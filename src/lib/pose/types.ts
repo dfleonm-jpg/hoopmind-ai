@@ -36,6 +36,22 @@ export interface ShotAnalysisResult {
 export const OPTIMAL_ELBOW = { min: 80, max: 100 };
 export const OPTIMAL_KNEE = { min: 100, max: 130 };
 
+/** Result of the ball-handling / dribble analysis (v5). */
+export interface DribbleAnalysisResult {
+  /** Estimated dribbles per second (ball-hand reps). */
+  tempo: number;
+  /** Dribble height estimate: 0 (muy bajo/control) .. 1 (alto). */
+  heightIndex: number;
+  /** How low the stance is while handling, degrees of knee flexion (lower = better base). */
+  stanceKnee: number;
+  /** Lateral hand travel range (crossover amplitude), 0..1 normalized. */
+  crossoverRange: number;
+  /** Head/eyes-up proxy: how stable the head height is (1 = steady, eyes up). */
+  headStability: number;
+  /** Detection confidence 0..1. */
+  confidence: number;
+}
+
 export interface PoseEngine {
   /**
    * Analyze a short shot clip entirely on the client.
@@ -44,6 +60,13 @@ export interface PoseEngine {
   analyzeShot(
     video: Blob | HTMLVideoElement,
   ): Promise<ShotAnalysisResult>;
+  /**
+   * Analyze a short ball-handling clip (dribble tempo, stance, crossover,
+   * eyes-up stability). Entirely client-side (v5).
+   */
+  analyzeDribble(
+    video: Blob | HTMLVideoElement,
+  ): Promise<DribbleAnalysisResult>;
   /** Release underlying resources. */
   dispose?(): void;
 }

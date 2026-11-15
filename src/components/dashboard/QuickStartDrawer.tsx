@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -57,8 +57,12 @@ function Option({
 
 export function QuickStartDrawer() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
-  const [open, setOpen] = React.useState(false);
+  // Deep-link / PWA shortcut: /dashboard?train=1 opens Quick Start immediately.
+  const [open, setOpen] = React.useState(
+    () => searchParams.get("train") === "1",
+  );
   const [duration, setDuration] = React.useState<Duration>(30);
   const [scenario, setScenario] = React.useState<Scenario>("HALF_COURT");
   const [readiness, setReadiness] = React.useState<Readiness>("FRESH");

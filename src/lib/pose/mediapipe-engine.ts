@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  DribbleAnalysisResult,
   PoseEngine,
   PoseKeyframe,
   ShotAnalysisResult,
@@ -166,6 +167,128 @@ export class MediaPipePoseEngine implements PoseEngine {
       releaseMs: Math.round(release.tMs),
       confidence: Math.min(1, Math.max(0, round2(confidence))),
       keyframe: release.keyframe,
+    };
+  }
+
+  async analyzeDribble(
+    input: Blob | HTMLVideoElement,
+  ): Promise<DribbleAnalysisResult> {
+    const landmarker = (await this.ensureLandmarker()) as {
+      detectForVideo: (
+        v: HTMLVideoElement,
+        ts: number,
+      ) => { landmarks: LM[][] };
+    };
+    const video = await toVideoElement(input);
+    const duration = video.duration;
+    if (!isFinite(duration) || duration <= 0) {
+      return {
+        tempo: 0,
+        heightIndex: 0,
+        stanceKnee: 0,
+        crossoverRange: 0,
+        headStability: 0,
+        confidence: 0,
+      };
+    }
+
+    // Dense sampling to capture dribble oscillation (up to ~48 frames).
+    const FRAMES = Math.min(48, Math.max(24, Math.round(duration * 12)));
+    const samples: {
+      tSec: number;
+      wristY: number;
+      wristX: number;
+      hipY: number;
+      kneeAngle: number;
+      headY: number;
+      conf: number;
+    }[] = [];
+
+    for (let i = 0; i < FRAMES; i++) {
+      const tSec = (duration * i) / (FRAMES - 1);
+      await seek(video, tSec);
+      const res = landmarker.detectForVideo(video, tSec * 1000);
+      const lm = res.landmarks?.[0];
+      if (!lm || lm.length < 29) continue;
+
+      // Active handling hand = lower wrist (closer to the ground).
+      const rW = lm[L.rWrist];
+      const lW = lm[L.lWrist];
+      if (!rW || !lW) continue;
+      const right = (rW.y ?? 0) >= (lW.y ?? 0);
+      const wr = right ? rW : lW;
+      const hip = lm[right ? L.rHip : L.lHip];
+      const kn = lm[right ? L.rKnee : L.lKnee];
+      const an = lm[right ? L.rAnkle : L.lAnkle];
+      const nose = lm[0];
+      if (!hip || !kn || !an) continue;
+
+      const vis = [wr, hip, kn, an].map((p) => p.visibility ?? 0.6);
+      samples.push({
+        tSec,
+        wristY: wr.y,
+        wristX: wr.x,
+        hipY: hip.y,
+        kneeAngle: angle(hip, kn, an),
+        headY: nose?.y ?? hip.y,
+        conf: vis.reduce((s, v) => s + v, 0) / vis.length,
+      });
+    }
+
+    if (samples.length < 6) {
+      return {
+        tempo: 0,
+        heightIndex: 0,
+        stanceKnee: 0,
+        crossoverRange: 0,
+        headStability: 0,
+        confidence: 0,
+      };
+    }
+
+    // Tempo: count oscillation cycles of the wrist Y (peaks) over time.
+    const ys = samples.map((s) => s.wristY);
+    const mean = ys.reduce((a, b) => a + b, 0) / ys.length;
+    let crossings = 0;
+    for (let i = 1; i < ys.length; i++) {
+      const prev = ys[i - 1]! - mean;
+      const cur = ys[i]! - mean;
+      if (prev <= 0 && cur > 0) crossings++; // upward zero-crossings = cycles
+    }
+    const span = samples[samples.length - 1]!.tSec - samples[0]!.tSec || 1;
+    const tempo = crossings / span;
+
+    // Dribble height: amplitude of wrist Y relative to hip (bigger = higher).
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const amplitude = maxY - minY; // normalized units
+    const heightIndex = Math.min(1, amplitude / 0.25);
+
+    // Crossover range: lateral wrist travel.
+    const xs = samples.map((s) => s.wristX);
+    const crossoverRange = Math.min(1, (Math.max(...xs) - Math.min(...xs)) / 0.5);
+
+    // Stance: median knee flexion while handling (lower angle = lower stance).
+    const knees = samples.map((s) => s.kneeAngle).sort((a, b) => a - b);
+    const stanceKnee = knees[Math.floor(knees.length / 2)] ?? 0;
+
+    // Head stability (eyes up): less head-Y variance = steadier = eyes up.
+    const heads = samples.map((s) => s.headY);
+    const hMean = heads.reduce((a, b) => a + b, 0) / heads.length;
+    const hVar =
+      heads.reduce((a, b) => a + (b - hMean) ** 2, 0) / heads.length;
+    const headStability = Math.max(0, Math.min(1, 1 - Math.sqrt(hVar) / 0.08));
+
+    const confidence =
+      samples.reduce((s, x) => s + x.conf, 0) / samples.length;
+
+    return {
+      tempo: round1(tempo),
+      heightIndex: round2(heightIndex),
+      stanceKnee: round1(stanceKnee),
+      crossoverRange: round2(crossoverRange),
+      headStability: round2(headStability),
+      confidence: round2(Math.min(1, Math.max(0, confidence))),
     };
   }
 
