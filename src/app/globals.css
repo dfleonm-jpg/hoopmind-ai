@@ -21,8 +21,9 @@
   --color-accent: #ff5e1a;
   --color-accent-hover: #ff7a40;
 
-  /* Feedback */
+  /* Feedback — neon green for positive metrics (v2) */
   --color-success: #22c55e;
+  --color-success-dim: #16a34a;
   --color-danger: #ef4444;
 
   /* Fonts */
@@ -31,6 +32,9 @@
 
   /* Minimum touch target for on-court one-handed use (Req. 8.6) */
   --size-touch: 48px;
+
+  /* Bottom-nav height used to pad scroll areas on mobile */
+  --size-bottomnav: 68px;
 }
 
 html {
@@ -49,4 +53,42 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* iOS/Android safe-area helpers for the fixed bottom navigation */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+@utility mb-bottomnav {
+  margin-bottom: calc(var(--size-bottomnav) + env(safe-area-inset-bottom, 0px));
+}
+
+/* Subtle glassmorphism surface (premium dark UI) */
+@utility glass {
+  background-color: color-mix(in srgb, var(--color-card) 90%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgb(255 255 255 / 0.08);
+}
+
+/* Loading skeleton shimmer */
+@keyframes hm-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Respect reduced-motion for the shimmer and app animations */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/(auth)/login/actions";
 import { DashboardView } from "@/components/dashboard/DashboardView";
+import { TopHeader } from "@/components/nav/TopHeader";
 
 export const instant = false;
 
@@ -35,24 +36,20 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-6">
-      <header className="flex items-center justify-between gap-4">
-        <div className="flex flex-col">
-          <span className="text-accent text-xs font-semibold tracking-widest uppercase">
-            HoopMind AI
-          </span>
-          <h1 className="text-fg text-2xl font-bold tracking-tight">
-            Tu cancha
-          </h1>
-        </div>
-        <form action={signOut}>
-          <Button variant="ghost" type="submit">
-            Salir
-          </Button>
-        </form>
-      </header>
-
-      <DashboardView workouts={workoutItems} />
-    </main>
+    <>
+      <TopHeader
+        title="Tu cancha"
+        action={
+          <form action={signOut}>
+            <Button variant="ghost" type="submit">
+              Salir
+            </Button>
+          </form>
+        }
+      />
+      <main className="mx-auto mb-bottomnav flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-5">
+        <DashboardView workouts={workoutItems} />
+      </main>
+    </>
   );
 }

@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import {
+  ShotChartSkeleton,
+  StatsSkeleton,
+} from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/toast";
 import { ShotChart, type ZoneStat } from "./ShotChart";
 import { StreakCard } from "./StreakCard";
 
@@ -34,7 +39,9 @@ const SCENARIOS: { value: Scenario; label: string }[] = [
 
 export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [stats, setStats] = React.useState<Stats | null>(null);
+  const [loadingStats, setLoadingStats] = React.useState(true);
   const [format, setFormat] = React.useState<"" | "FIVE_V_FIVE" | "THREE_X_THREE">("");
   const [from, setFrom] = React.useState("");
   const [to, setTo] = React.useState("");
@@ -58,6 +65,8 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
         if (res.ok && !cancelled) setStats((await res.json()) as Stats);
       } catch {
         // ignore — keep previous stats
+      } finally {
+        if (!cancelled) setLoadingStats(false);
       }
     })();
 
@@ -81,13 +90,17 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
         const data = (await res.json().catch(() => null)) as {
           error?: { message?: string };
         } | null;
-        setGenError(data?.error?.message ?? "No se pudo generar la rutina.");
+        const msg = data?.error?.message ?? "No se pudo generar la rutina.";
+        setGenError(msg);
+        toast(msg, "error");
         return;
       }
       const workout = (await res.json()) as { id: string };
+      toast("Rutina generada. ¡A entrenar!", "success");
       router.push(`/train/${workout.id}`);
     } catch {
       setGenError("Error de red. Inténtalo de nuevo.");
+      toast("Error de red. Inténtalo de nuevo.", "error");
     } finally {
       setGenerating(false);
     }
@@ -96,7 +109,7 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
   return (
     <div className="flex flex-col gap-5">
       {/* Generate workout (uses suggestedDifficulty server-side) */}
-      <Card className="flex flex-col gap-3">
+      <Card variant="glass" className="flex flex-col gap-3">
         <CardTitle>Generar rutina con IA</CardTitle>
         <CardDescription>
           {stats
@@ -146,7 +159,9 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
       </Card>
 
       {/* Streaks */}
-      {stats ? (
+      {loadingStats ? (
+        <StatsSkeleton />
+      ) : stats ? (
         <StreakCard current={stats.streak.current} best={stats.streak.best} />
       ) : null}
 
@@ -200,7 +215,9 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
           ))}
         </div>
 
-        {hasData ? (
+        {loadingStats ? (
+          <ShotChartSkeleton />
+        ) : hasData ? (
           <ShotChart zones={stats!.zones} />
         ) : (
           <div className="border-border rounded-xl border border-dashed p-6 text-center">

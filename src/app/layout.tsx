@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { PwaBootstrap } from "@/components/pwa/PwaBootstrap";
+import { ToastProvider } from "@/components/ui/toast";
+import { AppChrome } from "@/components/nav/AppChrome";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,7 +47,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="bg-bg text-fg min-h-full flex flex-col">
         <PwaBootstrap />
-        {children}
+        <ToastProvider>
+          {children}
+          <AppChrome />
+        </ToastProvider>
       </body>
     </html>
   );
