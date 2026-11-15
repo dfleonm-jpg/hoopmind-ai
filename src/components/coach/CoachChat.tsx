@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
@@ -107,21 +108,33 @@ export function CoachChat() {
           </div>
         ) : (
           messages.map((m, i) => (
-            <div
+            <motion.div
               key={i}
-              className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
+              initial={{ opacity: 0, y: 8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.2 }}
+              className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                 m.role === "USER"
-                  ? "bg-accent text-on-accent self-end"
-                  : "bg-card text-fg border-border self-start border"
+                  ? "from-accent-hover to-accent text-on-accent self-end bg-gradient-to-br shadow-[0_6px_20px_-8px_color-mix(in_srgb,var(--color-accent)_70%,transparent)]"
+                  : "glass text-fg self-start"
               }`}
             >
               {m.content}
-            </div>
+            </motion.div>
           ))
         )}
         {sending ? (
-          <div className="bg-card border-border text-fg-muted self-start rounded-2xl border px-3 py-2 text-sm">
-            Pensando…
+          <div className="glass text-fg-muted self-start rounded-2xl px-3.5 py-3">
+            <span className="flex gap-1.5" aria-label="Pensando">
+              {[0, 1, 2].map((d) => (
+                <motion.span
+                  key={d}
+                  className="bg-accent h-2 w-2 rounded-full"
+                  animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
+                  transition={{ duration: 0.9, repeat: Infinity, delay: d * 0.15 }}
+                />
+              ))}
+            </span>
           </div>
         ) : null}
         <div ref={endRef} />

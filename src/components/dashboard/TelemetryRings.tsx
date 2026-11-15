@@ -36,14 +36,15 @@ function Ring({ data }: { data: RingData }) {
           strokeDasharray={C}
           initial={{ strokeDashoffset: C }}
           animate={{ strokeDashoffset: C * (1 - pct) }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          style={{ filter: `drop-shadow(0 0 6px ${data.color})` }}
         />
         <text
           x={42}
-          y={46}
+          y={47}
           textAnchor="middle"
-          fontSize={16}
-          fontWeight={800}
+          fontSize={18}
+          fontWeight={900}
           fill="var(--color-fg)"
           className="tabular-nums"
         >

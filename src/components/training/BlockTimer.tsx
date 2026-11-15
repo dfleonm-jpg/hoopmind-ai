@@ -95,7 +95,7 @@ export function BlockTimer({
   return (
     <div className="flex flex-col gap-2">
       <div
-        className="text-fg text-center text-5xl font-bold tabular-nums"
+        className="text-fg text-glow-accent text-center text-6xl font-black tabular-nums"
         role="timer"
         aria-live="off"
       >

@@ -203,15 +203,15 @@ function TestRunner({
 
         <div className="flex items-center justify-around py-2">
           <div className="flex flex-col items-center">
-            <span className="text-success text-4xl font-extrabold tabular-nums">
+            <span className="text-success text-5xl font-black tabular-nums" style={{ textShadow: "0 0 18px color-mix(in srgb, var(--color-success) 60%, transparent)" }}>
               {score}
             </span>
             <span className="text-fg-muted text-xs">de {def.maxScore}</span>
           </div>
           <div className="flex flex-col items-center">
             <span
-              className={`text-4xl font-extrabold tabular-nums ${
-                timed && elapsed <= 10 && running ? "text-danger" : "text-telemetry"
+              className={`text-5xl font-black tabular-nums ${
+                timed && elapsed <= 10 && running ? "text-danger" : "text-telemetry text-glow-telemetry"
               }`}
             >
               {fmt(elapsed)}

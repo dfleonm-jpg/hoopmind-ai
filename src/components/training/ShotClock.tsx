@@ -92,8 +92,8 @@ export function ShotClock({ muted }: { muted: boolean }) {
       </div>
 
       <div
-        className={`text-center text-7xl font-extrabold tabular-nums ${
-          danger ? "text-danger" : "text-telemetry"
+        className={`text-center text-8xl font-black tabular-nums ${
+          danger ? "text-danger" : "text-telemetry text-glow-telemetry"
         }`}
         role="timer"
         aria-live="off"

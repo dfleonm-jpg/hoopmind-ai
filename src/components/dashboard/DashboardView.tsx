@@ -367,59 +367,67 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
         )}
       </Card>
 
-      {/* Quick links */}
-      <div className="grid grid-cols-2 gap-3">
-        <Link href="/gym">
-          <Button variant="secondary" className="w-full">
-            Body Transformation
-          </Button>
-        </Link>
-        <Link href="/plyometrics">
-          <Button variant="secondary" className="w-full">
-            Pliometría
-          </Button>
-        </Link>
-        <Link href="/nutrition">
-          <Button variant="secondary" className="w-full">
-            Nutrición
-          </Button>
-        </Link>
-        <Link href="/recovery">
-          <Button variant="secondary" className="w-full">
-            Recovery
-          </Button>
-        </Link>
-        <Link href="/glowup">
-          <Button variant="secondary" className="w-full">
-            Glow Up
-          </Button>
-        </Link>
-        <Link href="/life">
-          <Button variant="secondary" className="w-full">
-            Life OS
-          </Button>
-        </Link>
-        <Link href="/combine">
-          <Button variant="secondary" className="w-full">
-            Pruebas Combine
-          </Button>
-        </Link>
-        <Link href="/analyze">
-          <Button variant="secondary" className="w-full">
-            Analizar tiro
-          </Button>
-        </Link>
-        <Link href="/plays">
-          <Button variant="secondary" className="w-full">
-            Pizarra / Jugadas
-          </Button>
-        </Link>
-        <Link href="/onboarding">
-          <Button variant="secondary" className="w-full">
-            Editar perfil
-          </Button>
-        </Link>
+      {/* Quick links — glowing module tiles */}
+      <div>
+        <p className="text-fg-muted mb-2.5 text-xs font-semibold tracking-widest uppercase">
+          Explora el ecosistema
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          {MODULE_TILES.map((t) => (
+            <ModuleTile key={t.href} {...t} />
+          ))}
+        </div>
       </div>
     </div>
+  );
+}
+
+const MODULE_TILES = [
+  { href: "/gym", label: "Body", sub: "Fuerza", icon: "M6 7v10M18 7v10M6 12h12", tint: "var(--color-success)" },
+  { href: "/plyometrics", label: "Pliometría", sub: "Salto", icon: "M13 2 3 14h7l-1 8 10-12h-7l1-8z", tint: "var(--color-violet)" },
+  { href: "/nutrition", label: "Nutrición", sub: "Macros", icon: "M6 2v7a3 3 0 0 0 6 0V2M9 9v13M16 2c-1.5 2-2 4-2 6s.5 4 2 4 2-2 2-4-.5-4-2-6z", tint: "var(--color-telemetry)" },
+  { href: "/recovery", label: "Recovery", sub: "Readiness", icon: "M22 12h-4l-3 9L9 3l-3 9H2", tint: "var(--color-success)" },
+  { href: "/glowup", label: "Glow Up", sub: "Cuidado", icon: "M12 3v2M12 19v2M5 12H3M21 12h-2M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z", tint: "var(--color-accent)" },
+  { href: "/life", label: "Life OS", sub: "Agenda", icon: "M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z", tint: "var(--color-telemetry)" },
+  { href: "/combine", label: "Combine", sub: "Pruebas", icon: "M6 9V2h12v7a6 6 0 0 1-12 0zM6 22h12M9 18v4M15 18v4", tint: "var(--color-accent)" },
+  { href: "/analyze", label: "Form Check", sub: "Cámara", icon: "M23 7l-7 5 7 5V7zM1 5h15v14H1z", tint: "var(--color-telemetry)" },
+  { href: "/plays", label: "Pizarra", sub: "Jugadas", icon: "M4 4h16v16H4zM4 9h16M9 9v11", tint: "var(--color-accent)" },
+  { href: "/onboarding", label: "Perfil", sub: "Editar", icon: "M20 21a8 8 0 1 0-16 0M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", tint: "var(--color-fg-muted)" },
+] as const;
+
+function ModuleTile({
+  href,
+  label,
+  sub,
+  icon,
+  tint,
+}: {
+  href: string;
+  label: string;
+  sub: string;
+  icon: string;
+  tint: string;
+}) {
+  return (
+    <Link href={href}>
+      <div className="glass group flex items-center gap-3 rounded-2xl p-3 transition-transform active:scale-[0.97]">
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-shadow"
+          style={{
+            color: tint,
+            background: `color-mix(in srgb, ${tint} 14%, transparent)`,
+            boxShadow: `0 0 22px -8px ${tint}`,
+          }}
+        >
+          <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d={icon} />
+          </svg>
+        </span>
+        <span className="flex min-w-0 flex-col">
+          <span className="text-fg truncate text-sm font-semibold">{label}</span>
+          <span className="text-fg-muted text-[11px]">{sub}</span>
+        </span>
+      </div>
+    </Link>
   );
 }
