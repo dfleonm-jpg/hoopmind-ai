@@ -14,6 +14,7 @@ import { ShotChart, type ZoneStat } from "./ShotChart";
 import { StreakCard } from "./StreakCard";
 import { ScoutingCard, type Gamification } from "./ScoutingCard";
 import { QuickStartDrawer } from "./QuickStartDrawer";
+import { TelemetryRings, type RingData } from "./TelemetryRings";
 
 interface Stats {
   zones: ZoneStat[];
@@ -79,7 +80,55 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
     };
   }, [format, from, to]);
 
+  // Gym load (avg fatigue) for the "Carga" telemetry ring.
+  const [avgLoad, setAvgLoad] = React.useState(0);
+  React.useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/gym/recovery");
+        if (res.ok && !cancelled) {
+          const data = (await res.json()) as {
+            muscles: { fatigue: number }[];
+          };
+          const avg =
+            data.muscles.length > 0
+              ? data.muscles.reduce((s, m) => s + m.fatigue, 0) /
+                data.muscles.length
+              : 0;
+          setAvgLoad(avg);
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const hasData = stats != null && stats.totals.attempted > 0;
+
+  const rings: RingData[] = [
+    {
+      label: "Carga",
+      value: avgLoad,
+      display: `${Math.round(avgLoad * 100)}`,
+      color: "var(--color-accent)",
+    },
+    {
+      label: "Tiro",
+      value: stats?.totals.pct ?? 0,
+      display: `${Math.round((stats?.totals.pct ?? 0) * 100)}`,
+      color: "var(--color-success)",
+    },
+    {
+      label: "Consistencia",
+      value: Math.min(1, (stats?.streak.current ?? 0) / 7),
+      display: `${stats?.streak.current ?? 0}`,
+      color: "var(--color-telemetry)",
+    },
+  ];
 
   async function generate() {
     setGenerating(true);
@@ -118,6 +167,11 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
     <div className="flex flex-col gap-5">
       {/* Quick-Start: hero "ENTRENAR YA" (v3) */}
       <QuickStartDrawer />
+
+      {/* Telemetry rings: Carga · Tiro · Consistencia (v4) */}
+      <Card variant="glass">
+        <TelemetryRings rings={rings} />
+      </Card>
 
       {/* Generate workout (detailed controls) */}
       <Card variant="glass" className="flex flex-col gap-3">
@@ -299,6 +353,11 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
 
       {/* Quick links */}
       <div className="grid grid-cols-2 gap-3">
+        <Link href="/gym">
+          <Button variant="secondary" className="w-full">
+            Body Transformation
+          </Button>
+        </Link>
         <Link href="/combine">
           <Button variant="secondary" className="w-full">
             Pruebas Combine

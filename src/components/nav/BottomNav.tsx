@@ -10,15 +10,14 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ReactNode;
-  /** match when the pathname starts with this (for nested routes). */
   match: (path: string) => boolean;
 }
 
 function Icon({ d }: { d: string }) {
   return (
     <svg
-      width={24}
-      height={24}
+      width={22}
+      height={22}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -40,22 +39,22 @@ const ITEMS: NavItem[] = [
     match: (p) => p === "/dashboard",
   },
   {
-    href: "/dashboard?train=1",
-    label: "Entrenar",
+    href: "/gym",
+    label: "Gym",
     icon: <Icon d="M6 7v10M18 7v10M6 12h12M3 9v6M21 9v6" />,
-    match: (p) => p.startsWith("/train"),
+    match: (p) => p.startsWith("/gym"),
   },
   {
     href: "/plays",
     label: "Pizarra",
     icon: <Icon d="M4 4h16v16H4zM4 9h16M9 9v11" />,
-    match: (p) => p.startsWith("/plays"),
+    match: (p) => p.startsWith("/plays") || p.startsWith("/train"),
   },
   {
     href: "/analyze",
     label: "Analizar",
     icon: <Icon d="M23 7l-7 5 7 5V7zM1 5h15v14H1z" />,
-    match: (p) => p.startsWith("/analyze"),
+    match: (p) => p.startsWith("/analyze") || p.startsWith("/combine"),
   },
   {
     href: "/onboarding",
@@ -65,40 +64,39 @@ const ITEMS: NavItem[] = [
   },
 ];
 
+/** Floating Pill Dock (v4): rounded, detached from the screen edges. */
 export function BottomNav() {
   const pathname = usePathname() ?? "";
 
   return (
     <nav
       aria-label="Navegación principal"
-      className="glass pb-safe fixed inset-x-0 bottom-0 z-50 border-t border-white/10 sm:mx-auto sm:max-w-md sm:rounded-t-2xl"
+      className="pb-safe fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-3"
     >
-      <ul className="flex items-stretch justify-around px-2">
+      <ul className="glass flex items-center gap-1 rounded-full px-2 py-1.5 shadow-lg shadow-black/40">
         {ITEMS.map((item) => {
           const active = item.match(pathname);
           return (
-            <li key={item.label} className="flex-1">
+            <li key={item.label}>
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "relative flex min-h-touch flex-col items-center justify-center gap-0.5 py-2",
-                  active ? "text-accent" : "text-fg-muted hover:text-fg",
+                  "relative flex min-h-touch min-w-touch flex-col items-center justify-center gap-0.5 rounded-full px-3 py-1.5",
+                  active ? "text-on-accent" : "text-fg-muted hover:text-fg",
                 )}
               >
-                <motion.span
-                  animate={{ scale: active ? 1.12 : 1, y: active ? -1 : 0 }}
-                  transition={{ type: "spring", stiffness: 420, damping: 24 }}
-                >
-                  {item.icon}
-                </motion.span>
-                <span className="text-[11px] font-medium">{item.label}</span>
                 {active ? (
                   <motion.span
-                    layoutId="bottomnav-indicator"
-                    className="bg-accent absolute top-0 h-0.5 w-8 rounded-full"
+                    layoutId="pilldock-active"
+                    className="bg-accent absolute inset-0 rounded-full"
+                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   />
                 ) : null}
+                <span className="relative z-10">{item.icon}</span>
+                <span className="relative z-10 text-[10px] font-semibold">
+                  {item.label}
+                </span>
               </Link>
             </li>
           );

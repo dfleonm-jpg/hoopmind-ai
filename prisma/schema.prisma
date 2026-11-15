@@ -72,6 +72,8 @@ model User {
   sessions       Session[]
   customPlays    CustomPlay[]
   combineResults CombineResult[]
+  gymSessions    GymSession[]
+  bodyMeasurements BodyMeasurement[]
 }
 
 model Profile {
@@ -224,4 +226,103 @@ model CombineResult {
   createdAt DateTime    @default(now())
 
   @@index([userId])
+}
+
+// ============================================================
+// Body Transformation (Gym) — v4
+// ============================================================
+
+enum MuscleGroup {
+  CHEST
+  BACK
+  SHOULDERS
+  BICEPS
+  TRICEPS
+  FOREARMS
+  CORE
+  QUADS
+  HAMSTRINGS
+  GLUTES
+  CALVES
+}
+
+enum JointImpact {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ExerciseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+// Curated, shared exercise catalog (not user-owned). Slug is a stable key.
+model GymExercise {
+  id              String        @id @default(uuid()) @db.Uuid
+  slug            String        @unique
+  name            String
+  primaryMuscles  MuscleGroup[]
+  secondaryMuscles MuscleGroup[]
+  level           ExerciseLevel
+  jointImpact     JointImpact
+  equipment       String
+  execution       String // step-by-step technique
+  commonMistakes  String[]
+  variations      String[]
+  defaultSets     Int           @default(3)
+  defaultRepsLow  Int           @default(8)
+  defaultRepsHigh Int           @default(12)
+  restSeconds     Int           @default(90)
+  createdAt       DateTime      @default(now())
+  setLogs         GymSetLog[]
+}
+
+model GymSession {
+  id          String       @id @default(uuid()) @db.Uuid
+  userId      String       @db.Uuid
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  focus       MuscleGroup[] // muscle groups targeted this session
+  startedAt   DateTime     @default(now())
+  endedAt     DateTime?
+  notes       String?
+  setLogs     GymSetLog[]
+
+  @@index([userId, startedAt])
+}
+
+model GymSetLog {
+  id          String      @id @default(uuid()) @db.Uuid
+  sessionId   String      @db.Uuid
+  session     GymSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exerciseId  String      @db.Uuid
+  exercise    GymExercise @relation(fields: [exerciseId], references: [id])
+  setNumber   Int
+  weightKg    Float
+  reps        Int
+  rpe         Int? // 1–10 perceived exertion (optional)
+  isPr        Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+
+  @@index([sessionId])
+  @@index([exerciseId])
+}
+
+model BodyMeasurement {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  measuredAt  DateTime @default(now())
+  weightKg    Float?
+  bodyFatPct  Float?
+  chestCm     Float?
+  waistCm     Float?
+  hipsCm      Float?
+  armCm       Float?
+  thighCm     Float?
+  notes       String?
+
+  @@index([userId, measuredAt])
 }

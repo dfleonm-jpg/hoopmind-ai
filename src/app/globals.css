@@ -7,8 +7,8 @@
      --color-fg-muted #AEB2B8  ~  8.4:1  (AAA)
      --color-accent   #FF5E1A  ~  4.6:1  (AA normal text) */
 @theme {
-  /* Surfaces */
-  --color-bg: #0a0a0c;
+  /* Surfaces — Kinetic Noir (v4): deeper black base */
+  --color-bg: #070709;
   --color-card: #121216;
   --color-border: #26262c;
 
