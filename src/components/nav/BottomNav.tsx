@@ -45,16 +45,16 @@ const ITEMS: NavItem[] = [
     match: (p) => p.startsWith("/gym"),
   },
   {
+    href: "/coach",
+    label: "Coach",
+    icon: <Icon d="M12 2a3 3 0 0 1 3 3v1a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zM5 21a7 7 0 0 1 14 0" />,
+    match: (p) => p.startsWith("/coach"),
+  },
+  {
     href: "/plays",
     label: "Pizarra",
     icon: <Icon d="M4 4h16v16H4zM4 9h16M9 9v11" />,
-    match: (p) => p.startsWith("/plays") || p.startsWith("/train"),
-  },
-  {
-    href: "/analyze",
-    label: "Analizar",
-    icon: <Icon d="M23 7l-7 5 7 5V7zM1 5h15v14H1z" />,
-    match: (p) => p.startsWith("/analyze") || p.startsWith("/combine"),
+    match: (p) => p.startsWith("/plays") || p.startsWith("/train") || p.startsWith("/analyze") || p.startsWith("/combine"),
   },
   {
     href: "/onboarding",

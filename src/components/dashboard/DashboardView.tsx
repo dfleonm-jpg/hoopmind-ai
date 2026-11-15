@@ -173,6 +173,22 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
         <TelemetryRings rings={rings} />
       </Card>
 
+      {/* AI Coach entry (core) */}
+      <Link href="/coach">
+        <Card variant="glass" className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl" aria-hidden>🧠</span>
+            <div>
+              <CardTitle className="text-base">AI Coach</CardTitle>
+              <CardDescription>
+                Pregunta a tu cerebro de rendimiento con tus datos reales.
+              </CardDescription>
+            </div>
+          </div>
+          <span className="text-accent shrink-0 text-sm font-semibold">Abrir ›</span>
+        </Card>
+      </Link>
+
       {/* Generate workout (detailed controls) */}
       <Card variant="glass" className="flex flex-col gap-3">
         <CardTitle>Generar rutina con IA</CardTitle>
