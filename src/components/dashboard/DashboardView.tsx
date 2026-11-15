@@ -165,29 +165,33 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Quick-Start: hero "ENTRENAR YA" (v3) */}
-      <QuickStartDrawer />
+      {/* Top row — web layout: 3-up on desktop */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="flex flex-col gap-4 lg:col-span-2">
+          {/* Quick-Start: hero "ENTRENAR YA" */}
+          <QuickStartDrawer />
+          {/* AI Coach entry (core) */}
+          <Link href="/coach">
+            <Card variant="glass" className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl" aria-hidden>🧠</span>
+                <div>
+                  <CardTitle className="text-base">AI Coach</CardTitle>
+                  <CardDescription>
+                    Pregunta a tu cerebro de rendimiento con tus datos reales.
+                  </CardDescription>
+                </div>
+              </div>
+              <span className="text-accent shrink-0 text-sm font-semibold">Abrir ›</span>
+            </Card>
+          </Link>
+        </div>
 
-      {/* Telemetry rings: Carga · Tiro · Consistencia (v4) */}
-      <Card variant="glass">
-        <TelemetryRings rings={rings} />
-      </Card>
-
-      {/* AI Coach entry (core) */}
-      <Link href="/coach">
-        <Card variant="glass" className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl" aria-hidden>🧠</span>
-            <div>
-              <CardTitle className="text-base">AI Coach</CardTitle>
-              <CardDescription>
-                Pregunta a tu cerebro de rendimiento con tus datos reales.
-              </CardDescription>
-            </div>
-          </div>
-          <span className="text-accent shrink-0 text-sm font-semibold">Abrir ›</span>
+        {/* Telemetry rings */}
+        <Card variant="glass" className="flex items-center justify-center">
+          <TelemetryRings rings={rings} />
         </Card>
-      </Link>
+      </div>
 
       {/* Generate workout (detailed controls) */}
       <Card variant="glass" className="flex flex-col gap-3">

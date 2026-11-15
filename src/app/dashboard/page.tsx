@@ -47,7 +47,7 @@ export default async function DashboardPage() {
           </form>
         }
       />
-      <main className="mx-auto mb-bottomnav flex w-full max-w-md flex-1 flex-col gap-5 px-4 py-5">
+      <main className="mx-auto mb-bottomnav flex w-full max-w-4xl flex-1 flex-col gap-5 px-4 py-5">
         <DashboardView workouts={workoutItems} />
       </main>
     </>

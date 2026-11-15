@@ -2,11 +2,15 @@
 
 import { usePathname } from "next/navigation";
 import { BottomNav } from "@/components/nav/BottomNav";
+import { SideNav } from "@/components/nav/SideNav";
 
-/** Routes where the bottom navigation should NOT appear. */
+/** Routes where app navigation should NOT appear. */
 const HIDE_ON = ["/", "/login", "/train"];
 
-/** Renders the bottom navigation on app routes only. */
+/**
+ * App navigation chrome: desktop sidebar (lg+) + mobile pill dock.
+ * The sidebar offsets content on lg via a body padding utility applied below.
+ */
 export function AppChrome() {
   const pathname = usePathname() ?? "/";
   const hide =
@@ -15,5 +19,10 @@ export function AppChrome() {
     pathname.startsWith("/train");
 
   if (hide) return null;
-  return <BottomNav />;
+  return (
+    <>
+      <SideNav />
+      <BottomNav />
+    </>
+  );
 }

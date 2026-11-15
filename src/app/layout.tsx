@@ -6,6 +6,7 @@ import { ToastProvider } from "@/components/ui/toast";
 import { AppChrome } from "@/components/nav/AppChrome";
 import { PageTransition } from "@/components/nav/PageTransition";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { ContentShell } from "@/components/nav/ContentShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,7 +51,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="bg-bg text-fg min-h-full flex flex-col">
         <PwaBootstrap />
         <ToastProvider>
-          <PageTransition>{children}</PageTransition>
+          <ContentShell>
+            <PageTransition>{children}</PageTransition>
+          </ContentShell>
           <AppChrome />
           <InstallPrompt />
         </ToastProvider>

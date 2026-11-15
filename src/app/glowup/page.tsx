@@ -14,7 +14,7 @@ export default async function GlowUpPage() {
   return (
     <>
       <TopHeader title="Glow Up" subtitle="Cuidado personal" />
-      <main className="mx-auto mb-bottomnav flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-5">
+      <main className="mx-auto mb-bottomnav flex w-full max-w-4xl flex-1 flex-col gap-4 px-4 py-5">
         <GlowUpWorkspace />
       </main>
     </>

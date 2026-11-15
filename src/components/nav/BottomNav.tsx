@@ -71,7 +71,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Navegación principal"
-      className="pb-safe fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-3"
+      className="pb-safe fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-3 lg:hidden"
     >
       <ul className="glass flex items-center gap-0.5 rounded-full px-2 py-1.5">
         {ITEMS.map((item) => {
