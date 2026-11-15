@@ -4,6 +4,7 @@ import { getAuthUser } from "@/lib/supabase/auth";
 import { TopHeader } from "@/components/nav/TopHeader";
 import { CoachChat } from "@/components/coach/CoachChat";
 import { WeeklyReport } from "@/components/coach/WeeklyReport";
+import { IntakeLauncher } from "@/components/coach/IntakeLauncher";
 
 export const instant = false;
 
@@ -16,6 +17,7 @@ export default async function CoachPage() {
     <>
       <TopHeader title="AI Coach" subtitle="Tu cerebro de rendimiento" />
       <main className="mx-auto mb-bottomnav flex w-full max-w-4xl flex-1 flex-col gap-4 px-4 py-5">
+        <IntakeLauncher />
         <WeeklyReport />
         <CoachChat />
       </main>

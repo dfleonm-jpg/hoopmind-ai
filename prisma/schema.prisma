@@ -39,6 +39,15 @@ enum Goal {
   BALL_HANDLING
   VERTICAL
   DEFENSE
+  // v5: expanded goals
+  STRENGTH
+  ENDURANCE
+  SPEED
+  WEIGHT_LOSS
+  MUSCLE_GAIN
+  MOBILITY
+  IQ
+  FINISHING
 }
 
 enum Scenario {

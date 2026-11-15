@@ -25,6 +25,14 @@ const GOAL_ES: Record<string, string> = {
   BALL_HANDLING: "ball handling",
   VERTICAL: "explosividad vertical",
   DEFENSE: "defensa",
+  STRENGTH: "fuerza",
+  ENDURANCE: "resistencia",
+  SPEED: "velocidad",
+  WEIGHT_LOSS: "pérdida de grasa",
+  MUSCLE_GAIN: "masa muscular",
+  MOBILITY: "movilidad",
+  IQ: "IQ de juego / toma de decisiones",
+  FINISHING: "finalización cerca del aro",
 };
 
 const SCENARIO_ES: Record<GenerateWorkoutInput["scenario"], string> = {
