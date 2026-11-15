@@ -84,6 +84,9 @@ model Profile {
   level      SkillLevel
   goals      Goal[] // 1–4
   isComplete Boolean    @default(false)
+  // Gamification (v2): XP accrues per completed session; gameLevel recalculated on close.
+  xp         Int        @default(0)
+  gameLevel  Int        @default(1)
   updatedAt  DateTime   @updatedAt
 }
 
@@ -139,8 +142,20 @@ model Session {
   realDurationS Int?
   shotLogs      ShotLog[]
   shotAnalyses  ShotAnalysis[]
+  report        SessionReport?
 
   @@index([userId, startedAt])
+}
+
+// Post-session AI report (v2): summary + actionable recommendations + XP earned.
+model SessionReport {
+  id              String   @id @default(uuid()) @db.Uuid
+  sessionId       String   @unique @db.Uuid
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  summary         String
+  recommendations Json // string[] of actionable tips
+  xpEarned        Int      @default(0)
+  createdAt       DateTime @default(now())
 }
 
 // Agregado de tiros por ejercicio y zona dentro de una sesión.

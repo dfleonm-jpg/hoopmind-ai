@@ -3,7 +3,12 @@ import "server-only";
 import { generateObject } from "ai";
 import { model } from "@/lib/ai/provider";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
-import { WorkoutSchema, type Workout } from "@/lib/ai/schema";
+import {
+  SwapExerciseSchema,
+  WorkoutSchema,
+  type SwapExercise,
+  type Workout,
+} from "@/lib/ai/schema";
 
 /** Distinguishes a validation failure (-> 422) from a provider failure (-> 503). */
 export class WorkoutValidationError extends Error {
@@ -70,6 +75,45 @@ export async function generateWorkout(prompt: string): Promise<Workout> {
     lastValidationError instanceof Error
       ? lastValidationError.message
       : "La IA no produjo una rutina válida tras varios intentos.",
+  );
+}
+
+/**
+ * Generate a single replacement exercise for the on-court quick-swap feature.
+ * Keeps the same block type and (approx.) duration. Same error contract.
+ */
+export async function generateSwapExercise(prompt: string): Promise<SwapExercise> {
+  let lastValidationError: unknown;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const { object } = await generateObject({
+        model,
+        schema: SwapExerciseSchema,
+        system: SYSTEM_PROMPT,
+        prompt,
+        abortSignal: controller.signal,
+      });
+      return object;
+    } catch (err) {
+      if (isValidationError(err)) {
+        lastValidationError = err;
+        continue;
+      }
+      throw new AIProviderError(
+        err instanceof Error ? err.message : "Fallo del proveedor de IA.",
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new WorkoutValidationError(
+    lastValidationError instanceof Error
+      ? lastValidationError.message
+      : "La IA no produjo un ejercicio válido tras varios intentos.",
   );
 }
 

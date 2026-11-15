@@ -3,6 +3,7 @@ import "server-only";
 import type { Profile } from "@prisma/client";
 import type { GenerateWorkoutInput } from "@/lib/ai/schema";
 import { BLOCK_ORDER } from "@/lib/ai/schema";
+import type { PerformanceDiagnosis } from "@/lib/ai/performance";
 
 const POSITION_ES: Record<Profile["position"], string> = {
   PG: "Base",
@@ -46,15 +47,22 @@ Reglas obligatorias:
 - Cada bloque tiene entre 1 y 6 ejercicios, con 'name', 'description', 'reps' e 'intensity' (LOW | MEDIUM | HIGH).
 - Ajusta el volumen y la intensidad al nivel del jugador y prioriza sus objetivos.
 - Vincula 'drillId' SOLO cuando el ejercicio corresponda claramente a uno de estos drills precargados; en cualquier otro caso usa null:
-  * 'pick_and_roll': trabajo de bloqueo y continuación (lectura de la pantalla, salida y tiro/pase).
+  * 'pick_and_roll': bloqueo directo, lectura de la pantalla y continuación (tiro/pase).
   * 'dribble_drive_stepback': penetración en bote con finalización en step-back.
   * 'catch_and_shoot_move': recepción en movimiento y tiro inmediato.
+  * 'give_and_go': pasa y corta (dar-y-va) buscando la línea de fondo.
+  * 'horns_set': set "Horns" con dos postes arriba y espacio en esquinas.
+  * 'iso_cross_jab': aislamiento con cruce y jab para liberar el tiro.
+  * 'three_v_three_motion': movimiento 3x3 con check-ball y cortes continuos.
+  * 'backdoor_cut': puerta atrás tras sobre-marca del defensor.
 - Español claro y conciso. Términos de baloncesto correctos.`;
 
 export function buildWorkoutPrompt(
   profile: Profile,
   input: GenerateWorkoutInput,
   difficulty: number,
+  diagnosis?: PerformanceDiagnosis,
+  includePhysical?: boolean,
 ): string {
   const goals = profile.goals.map((g) => GOAL_ES[g] ?? g).join(", ");
   const hoop = hasHoop(input.scenario);
@@ -80,6 +88,45 @@ export function buildWorkoutPrompt(
         "El bloque FINISHING debe centrarse en finalizaciones simuladas sin aro (ataque de un cono/defensor imaginario, euro-step y recogida) y toma de decisión, no en encestar.",
       ];
 
+  // Performance memory (v2): steer the session toward the coldest zones.
+  const diagnosisRules: string[] = [];
+  if (diagnosis?.hasHistory) {
+    if (diagnosis.weakZones.length > 0 && hoop) {
+      const zones = diagnosis.weakZones
+        .map((z) => `${z.label} (${Math.round(z.pct * 100)}% en ${z.attempted} intentos)`)
+        .join(" y ");
+      diagnosisRules.push(
+        `Zonas más frías del jugador: ${zones}. Prioriza ejercicios correctivos de tiro/finalización desde esas zonas en los bloques TECHNIQUE y FINISHING.`,
+      );
+    } else if (diagnosis.weakZones.length > 0) {
+      diagnosisRules.push(
+        "Sin aro no se puede tirar a canasta, pero refuerza la mecánica en seco orientada a las zonas débiles del jugador.",
+      );
+    }
+    if (diagnosis.fatigue === "high") {
+      diagnosisRules.push(
+        "El jugador ha entrenado mucho en los últimos 3 días (fatiga alta): baja el volumen del acondicionamiento, prioriza técnica y añade más recuperación en la vuelta a la calma.",
+      );
+    } else if (diagnosis.fatigue === "fresh") {
+      diagnosisRules.push(
+        "El jugador llega fresco: puedes exigir algo más de intensidad en el acondicionamiento.",
+      );
+    }
+    if (diagnosis.streakDays >= 3) {
+      diagnosisRules.push(
+        `Lleva una racha de ${diagnosis.streakDays} días; mantén la motivación con variedad de ejercicios.`,
+      );
+    }
+  }
+
+  // Optional explosive-physical emphasis calibrated to body metrics (v2 Block 4).
+  const physicalRules: string[] = includePhysical
+    ? [
+        "Incluye trabajo físico explosivo integrado en los bloques CONDITIONING y WARMUP: potencia vertical (saltos), agilidad lateral y core.",
+        `Calibra la carga al físico del jugador (${profile.heightCm} cm, ${profile.weightKg} kg): jugadores más altos/pesados priorizan técnica de aterrizaje y movilidad; más ligeros pueden asumir mayor pliometría.`,
+      ]
+    : [];
+
   return [
     "Diseña una sesión de entrenamiento individual con estos datos del jugador:",
     `- Posición: ${POSITION_ES[profile.position]}`,
@@ -95,5 +142,11 @@ export function buildWorkoutPrompt(
     "",
     "Reglas de escenario:",
     ...scenarioRules.map((r) => `- ${r}`),
+    ...(diagnosisRules.length
+      ? ["", "Diagnóstico de rendimiento reciente:", ...diagnosisRules.map((r) => `- ${r}`)]
+      : []),
+    ...(physicalRules.length
+      ? ["", "Trabajo físico:", ...physicalRules.map((r) => `- ${r}`)]
+      : []),
   ].join("\n");
 }

@@ -12,6 +12,14 @@ import { BlockTimer } from "./BlockTimer";
 import { ShotCounter } from "./ShotCounter";
 import { playCue, toggleMuted } from "@/lib/audio/feedback";
 import { sendOrQueue } from "@/lib/offline/sync-queue";
+import { useToast } from "@/components/ui/toast";
+
+interface SessionReportData {
+  summary: string;
+  recommendations: string[];
+  xpEarned: number;
+  level: number;
+}
 
 const BLOCK_LABELS: Record<string, string> = {
   WARMUP: "Calentamiento",
@@ -42,6 +50,7 @@ export function ActiveSession({
   exerciseIds: string[][];
 }) {
   const router = useRouter();
+  const { toast } = useToast();
 
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [blockIdx, setBlockIdx] = React.useState(0);
@@ -54,6 +63,13 @@ export function ActiveSession({
 
   const [shots, setShots] = React.useState<Record<ShotKey, ShotAgg>>({});
   const startedAtRef = React.useRef<number>(0);
+
+  // Post-session report (v2) + on-court exercise swap (v2).
+  const [report, setReport] = React.useState<SessionReportData | null>(null);
+  const [swapping, setSwapping] = React.useState(false);
+  const [swapOverride, setSwapOverride] = React.useState<
+    Record<string, { name: string; description: string; reps: string }>
+  >({});
 
   // Record the session start time once, outside render (lint: no impure calls in render).
   React.useEffect(() => {
@@ -90,6 +106,49 @@ export function ActiveSession({
           Volver
         </Button>
       </Card>
+    );
+  }
+
+  // Post-session report screen (v2 Block 2): shown after a completed session.
+  if (report) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Card variant="glass" className="flex flex-col items-center gap-2 text-center">
+          <span className="text-accent text-xs font-semibold tracking-widest uppercase">
+            Reporte de sesión
+          </span>
+          <div className="text-success text-4xl font-extrabold tabular-nums">
+            +{report.xpEarned} XP
+          </div>
+          <p className="text-fg-muted text-sm">Nivel {report.level}</p>
+        </Card>
+
+        <Card className="flex flex-col gap-2">
+          <h2 className="text-fg font-semibold">Resumen</h2>
+          <p className="text-fg-muted text-sm">{report.summary}</p>
+        </Card>
+
+        <Card className="flex flex-col gap-2">
+          <h2 className="text-fg font-semibold">Para la próxima</h2>
+          <ul className="flex list-disc flex-col gap-1.5 pl-5">
+            {report.recommendations.map((r, i) => (
+              <li key={i} className="text-fg-muted text-sm">
+                {r}
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        <Button
+          size="lg"
+          onClick={() => {
+            router.push("/dashboard");
+            router.refresh();
+          }}
+        >
+          Volver al inicio
+        </Button>
+      </div>
     );
   }
 
@@ -156,10 +215,10 @@ export function ActiveSession({
     setFinishing(true);
     const startedAt = startedAtRef.current || Date.now();
     const realDurationS = Math.round((Date.now() - startedAt) / 1000);
+    const online = typeof navigator === "undefined" || navigator.onLine;
     try {
       let sid = sessionId;
       if (!sid) {
-        // Best-effort create if the initial POST failed (offline recovery).
         const res = await fetch("/api/sessions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -167,22 +226,89 @@ export function ActiveSession({
         });
         if (res.ok) sid = ((await res.json()) as { id: string }).id;
       }
+
       if (sid) {
         await persistShots(sid);
-        await sendOrQueue(`/api/sessions/${sid}`, "PATCH", {
-          status,
-          realDurationS,
-        });
+
+        // Online COMPLETED: direct PATCH to capture the AI report + XP.
+        if (status === "COMPLETED" && online) {
+          const res = await fetch(`/api/sessions/${sid}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status, realDurationS }),
+          });
+          if (res.ok) {
+            const data = (await res.json()) as {
+              report?: SessionReportData | null;
+            };
+            if (data.report) {
+              setReport(data.report);
+              setFinishing(false);
+              return; // show the report screen before navigating
+            }
+          }
+        } else {
+          // Abandon or offline: queue it so it syncs later.
+          await sendOrQueue(`/api/sessions/${sid}`, "PATCH", {
+            status,
+            realDurationS,
+          });
+          if (!online) toast("Sin conexión: se sincronizará al reconectar.", "info");
+        }
       }
     } catch {
       // swallow — navigate regardless so the user isn't stuck
     } finally {
-      router.push("/dashboard");
-      router.refresh();
+      if (!report) {
+        router.push("/dashboard");
+        router.refresh();
+      }
+    }
+  }
+
+  async function swapExercise() {
+    setSwapping(true);
+    try {
+      const res = await fetch(`/api/workouts/${workoutId}/swap-exercise`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          blockType: block.type,
+          durationMin: block.durationMin,
+          currentExerciseName: exercise.name,
+          reason: "other",
+        }),
+      });
+      if (!res.ok) {
+        toast("No se pudo cambiar el ejercicio.", "error");
+        return;
+      }
+      const data = (await res.json()) as {
+        exercise: { name: string; description: string; reps: string };
+      };
+      setSwapOverride((prev) => ({
+        ...prev,
+        [`${blockIdx}:${exIdx}`]: {
+          name: data.exercise.name,
+          description: data.exercise.description,
+          reps: data.exercise.reps,
+        },
+      }));
+      toast("Ejercicio cambiado.", "success");
+    } catch {
+      toast("Error de red al cambiar el ejercicio.", "error");
+    } finally {
+      setSwapping(false);
     }
   }
 
   const drillId = exercise.drillId as DrillId | null;
+  const override = swapOverride[`${blockIdx}:${exIdx}`];
+  const shownExercise = override ?? {
+    name: exercise.name,
+    description: exercise.description,
+    reps: exercise.reps,
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -233,20 +359,32 @@ export function ActiveSession({
 
       {/* Exercise guide */}
       <Card className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-fg font-semibold">{exercise.name}</h2>
-          <span className="text-fg-muted text-xs">{exercise.reps}</span>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-fg font-semibold">{shownExercise.name}</h2>
+          <span className="text-fg-muted shrink-0 text-xs">
+            {shownExercise.reps}
+          </span>
         </div>
-        <p className="text-fg-muted text-sm">{exercise.description}</p>
-        {drillId ? (
+        <p className="text-fg-muted text-sm">{shownExercise.description}</p>
+        <div className="mt-1 flex gap-2">
+          {drillId ? (
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => setShowBoard(true)}
+            >
+              Ver demostración
+            </Button>
+          ) : null}
           <Button
-            variant="secondary"
-            className="mt-1 w-full"
-            onClick={() => setShowBoard(true)}
+            variant="ghost"
+            className="flex-1"
+            disabled={swapping}
+            onClick={swapExercise}
           >
-            Ver demostración
+            {swapping ? "Cambiando…" : "Cambiar ejercicio"}
           </Button>
-        ) : null}
+        </div>
       </Card>
 
       {/* Shot counter */}

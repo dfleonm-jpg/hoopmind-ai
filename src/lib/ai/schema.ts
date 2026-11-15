@@ -65,6 +65,12 @@ export type Workout = z.infer<typeof WorkoutSchema>;
 export type WorkoutBlock = z.infer<typeof BlockSchema>;
 export type WorkoutExercise = z.infer<typeof ExerciseSchema>;
 
+/** Single-exercise schema for the on-court "swap exercise" feature (v2). */
+export const SwapExerciseSchema = z.object({
+  exercise: ExerciseSchema,
+});
+export type SwapExercise = z.infer<typeof SwapExerciseSchema>;
+
 /** Input accepted by POST /api/generate-workout (Req. 3.1). */
 export const GenerateWorkoutInput = z.object({
   durationMin: z.union([z.literal(30), z.literal(45), z.literal(60)]),
