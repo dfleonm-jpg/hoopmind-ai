@@ -3,6 +3,8 @@ import { getAuthUser } from "@/lib/supabase/auth";
 import { prisma } from "@/lib/db/prisma";
 import { apiError, badRequest, notFound, unauthorized } from "@/lib/api/respond";
 import { UpdateGymSessionInput } from "@/lib/validation/gym";
+import { awardXp } from "@/lib/gamification/award";
+import { XP_AWARDS } from "@/lib/gamification/xp";
 
 export async function PATCH(
   request: Request,
@@ -31,7 +33,7 @@ export async function PATCH(
 
   const existing = await prisma.gymSession.findFirst({
     where: { id, userId: user.id },
-    select: { id: true },
+    select: { id: true, endedAt: true, setLogs: { select: { isPr: true } } },
   });
   if (!existing) return notFound("Sesión no encontrada.");
 
@@ -44,5 +46,13 @@ export async function PATCH(
     select: { id: true, endedAt: true, notes: true },
   });
 
-  return NextResponse.json(session);
+  // Award XP once, only when the session transitions to ended (v4 Fase 6).
+  let award = null;
+  if (parsed.data.endedAt && existing.endedAt == null) {
+    const prs = existing.setLogs.filter((s) => s.isPr).length;
+    const amount = XP_AWARDS.GYM_SESSION + prs * XP_AWARDS.GYM_PR;
+    award = await awardXp(user.id, amount);
+  }
+
+  return NextResponse.json({ ...session, award });
 }

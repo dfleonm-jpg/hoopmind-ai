@@ -374,6 +374,11 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
             Body Transformation
           </Button>
         </Link>
+        <Link href="/plyometrics">
+          <Button variant="secondary" className="w-full">
+            Pliometría
+          </Button>
+        </Link>
         <Link href="/nutrition">
           <Button variant="secondary" className="w-full">
             Nutrición

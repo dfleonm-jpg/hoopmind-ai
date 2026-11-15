@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db/prisma";
 import { apiError, badRequest, unauthorized } from "@/lib/api/respond";
 import { LogFoodInput } from "@/lib/validation/nutrition";
 import { scaleMacros } from "@/lib/nutrition/calc";
+import { awardXp } from "@/lib/gamification/award";
+import { XP_AWARDS } from "@/lib/gamification/xp";
 
 /** Start of the current day in UTC. */
 function startOfTodayUTC(): Date {
@@ -69,6 +71,12 @@ export async function POST(request: Request) {
     },
   });
 
+  // Award XP once per day on the first food logged (v4 Fase 6).
+  const dayStart = startOfTodayUTC();
+  const priorToday = await prisma.foodLog.count({
+    where: { userId: user.id, loggedAt: { gte: dayStart } },
+  });
+
   // Server scales per-100g macros to the consumed quantity (source of truth).
   const macros = scaleMacros(input.per100g, input.quantityG);
 
@@ -83,5 +91,10 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.json(log, { status: 201 });
+  let award = null;
+  if (priorToday === 0) {
+    award = await awardXp(user.id, XP_AWARDS.NUTRITION_DAY_LOGGED);
+  }
+
+  return NextResponse.json({ ...log, award }, { status: 201 });
 }

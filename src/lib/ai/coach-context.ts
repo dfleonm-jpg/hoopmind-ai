@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db/prisma";
 import { computeReadiness } from "@/lib/recovery/readiness";
+import { computeAnthro } from "@/lib/anthropometry/calc";
 
 /**
  * Builds a compact, factual snapshot of the user's real data for the AI Coach.
@@ -50,6 +51,29 @@ export async function buildCoachContext(userId: string): Promise<string> {
         (profile.sex ? ` Sexo ${profile.sex}.` : ""),
     );
     lines.push(`- Objetivos: ${profile.goals.join(", ") || "sin especificar"}.`);
+
+    // Anthropometry-driven coaching cues (v4 Fase 6).
+    const a = computeAnthro(profile);
+    if (a.apeIndexCm != null) {
+      lines.push(
+        `- Envergadura: Ape Index ${a.apeIndexCm >= 0 ? "+" : ""}${a.apeIndexCm} cm.` +
+          (a.apeIndexCm >= 5
+            ? " Aprovéchalo en defensa, líneas de pase, deflections y finalizaciones extendidas."
+            : ""),
+      );
+    }
+    if (a.femurClass === "LONG_FEMUR") {
+      lines.push(
+        "- Palancas: fémur largo. En sentadilla adapta la mecánica (postura más abierta, talones elevados o trap bar para proteger la espalda baja) y prioriza control excéntrico de rodilla.",
+      );
+    } else if (a.femurClass === "SHORT_LEVER") {
+      lines.push(
+        "- Palancas: cortas. Permite torso más vertical en sentadilla; buena base para fuerza de piernas.",
+      );
+    }
+    if (a.touchHeightCm != null) {
+      lines.push(`- Alcance: toque máximo ${a.touchHeightCm} cm.`);
+    }
   } else {
     lines.push("- Perfil: aún no completado.");
   }

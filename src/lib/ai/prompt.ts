@@ -4,6 +4,7 @@ import type { Profile } from "@prisma/client";
 import type { GenerateWorkoutInput } from "@/lib/ai/schema";
 import { BLOCK_ORDER } from "@/lib/ai/schema";
 import type { PerformanceDiagnosis } from "@/lib/ai/performance";
+import { computeAnthro } from "@/lib/anthropometry/calc";
 
 const POSITION_ES: Record<Profile["position"], string> = {
   PG: "Base",
@@ -149,6 +150,24 @@ export function buildWorkoutPrompt(
     }
   }
 
+  // Anthropometry-driven mechanics (v4 Fase 6).
+  const anthro = computeAnthro(profile);
+  const anthroRules: string[] = [];
+  if (anthro.femurClass === "LONG_FEMUR") {
+    anthroRules.push(
+      "Fémur largo: en sentadillas usa una postura más abierta, talones elevados o trap bar para proteger la espalda baja; prioriza control excéntrico de rodilla y no penalices una inclinación natural del torso.",
+    );
+  } else if (anthro.femurClass === "SHORT_LEVER") {
+    anthroRules.push(
+      "Palancas cortas: el jugador puede mantener un torso vertical en sentadilla; buen candidato para trabajo de fuerza de piernas.",
+    );
+  }
+  if (anthro.apeIndexCm != null && anthro.apeIndexCm >= 5) {
+    anthroRules.push(
+      "Ape Index positivo: en el bloque de baloncesto aprovecha finalizaciones extendidas, líneas de pase y defensa de brazos largos.",
+    );
+  }
+
   // Optional explosive-physical emphasis calibrated to body metrics (v2 Block 4).
   const physicalRules: string[] = includePhysical
     ? [
@@ -177,6 +196,9 @@ export function buildWorkoutPrompt(
       : []),
     ...(physicalRules.length
       ? ["", "Trabajo físico:", ...physicalRules.map((r) => `- ${r}`)]
+      : []),
+    ...(anthroRules.length
+      ? ["", "Antropometría (ajusta la mecánica):", ...anthroRules.map((r) => `- ${r}`)]
       : []),
   ].join("\n");
 }

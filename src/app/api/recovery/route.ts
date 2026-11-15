@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db/prisma";
 import { apiError, badRequest, unauthorized } from "@/lib/api/respond";
 import { LogRecoveryInput } from "@/lib/validation/wellness";
 import { computeReadiness } from "@/lib/recovery/readiness";
+import { awardXp } from "@/lib/gamification/award";
+import { XP_AWARDS } from "@/lib/gamification/xp";
 
 export async function GET() {
   const user = await getAuthUser();
@@ -57,10 +59,22 @@ export async function POST(request: Request) {
     },
   });
 
+  // Award XP only for the first check-in of the day (v4 Fase 6).
+  const startOfDay = new Date();
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const priorToday = await prisma.recoveryLog.count({
+    where: { userId: user.id, loggedAt: { gte: startOfDay } },
+  });
+
   const log = await prisma.recoveryLog.create({
     data: { userId: user.id, ...parsed.data },
   });
   const readiness = computeReadiness(log);
 
-  return NextResponse.json({ log, readiness }, { status: 201 });
+  let award = null;
+  if (priorToday === 0) {
+    award = await awardXp(user.id, XP_AWARDS.RECOVERY_CHECKIN);
+  }
+
+  return NextResponse.json({ log, readiness, award }, { status: 201 });
 }

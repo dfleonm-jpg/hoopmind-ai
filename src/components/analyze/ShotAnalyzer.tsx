@@ -7,6 +7,12 @@ import { SkeletonOverlay } from "@/components/analyze/SkeletonOverlay";
 import { FramingGuide } from "@/components/analyze/FramingGuide";
 import { DiagnosisCard } from "@/components/analyze/DiagnosisCard";
 import {
+  GymFormDiagnosis,
+  FORM_EXERCISES,
+  type FormExercise,
+  type FemurClass,
+} from "@/components/analyze/GymFormDiagnosis";
+import {
   CONFIDENCE_THRESHOLD,
   type PoseEngine,
   type ShotAnalysisResult,
@@ -16,7 +22,14 @@ type Status = "idle" | "recording" | "analyzing" | "done" | "error";
 
 const MAX_RECORD_MS = 10_000;
 
-export function ShotAnalyzer({ sessionId }: { sessionId?: string }) {
+export function ShotAnalyzer({
+  sessionId,
+  femurClass = null,
+}: {
+  sessionId?: string;
+  femurClass?: FemurClass;
+}) {
+  const [exercise, setExercise] = React.useState<FormExercise>("SHOT");
   const [status, setStatus] = React.useState<Status>("idle");
   const [result, setResult] = React.useState<ShotAnalysisResult | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -149,12 +162,27 @@ export function ShotAnalyzer({ sessionId }: { sessionId?: string }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Exercise selector (v4 Fase 6): shot or gym form check */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Ejercicio a analizar">
+        {FORM_EXERCISES.map((e) => (
+          <Button
+            key={e.v}
+            variant={exercise === e.v ? "primary" : "secondary"}
+            className="min-h-0 h-10 shrink-0 px-3 text-sm"
+            onClick={() => setExercise(e.v)}
+          >
+            {e.l}
+          </Button>
+        ))}
+      </div>
+
       <Card className="flex flex-col gap-3">
-        <CardTitle>Analiza tu tiro</CardTitle>
+        <CardTitle>
+          {exercise === "SHOT" ? "Analiza tu tiro" : "Form check de gym"}
+        </CardTitle>
         <CardDescription>
-          Graba un tiro libre o un triple (máx. 10 s) o sube un video. El
-          análisis se ejecuta en tu dispositivo; el video no se sube a ningún
-          servidor.
+          Graba (máx. 10 s) o sube un video de perfil. El análisis se ejecuta en
+          tu dispositivo; el video no se sube a ningún servidor.
         </CardDescription>
 
         {/* Live preview + framing-guide silhouette (before/while recording) */}
@@ -286,8 +314,18 @@ export function ShotAnalyzer({ sessionId }: { sessionId?: string }) {
         </Card>
       ) : null}
 
-      {/* Guided diagnosis: comparative bars + immediate correction (v3) */}
-      {result && !lowConfidence ? <DiagnosisCard result={result} /> : null}
+      {/* Guided diagnosis: basketball shot (v3) or gym form check (v4 F6). */}
+      {result && !lowConfidence ? (
+        exercise === "SHOT" ? (
+          <DiagnosisCard result={result} />
+        ) : (
+          <GymFormDiagnosis
+            exercise={exercise}
+            result={result}
+            femurClass={femurClass}
+          />
+        )
+      ) : null}
     </div>
   );
 }

@@ -83,6 +83,8 @@ model User {
   careRoutines   CareRoutine[]
   aiConversations AiConversation[]
   plannerEvents  PlannerEvent[]
+  plyoSessions   PlyoSession[]
+  progressPhotos ProgressPhoto[]
 }
 
 model Profile {
@@ -104,6 +106,12 @@ model Profile {
   age        Int?
   sex        BiologicalSex?
   activityLevel ActivityLevel @default(MODERATE)
+  // Anthropometry (v4 phase 6): optional measured levers/reach.
+  wingspanCm      Int?
+  standingReachCm Int?
+  inseamCm        Int?
+  femurLengthCm   Int?
+  verticalJumpCm  Int?
   updatedAt  DateTime   @updatedAt
 }
 
@@ -555,4 +563,40 @@ model PlannerEvent {
   createdAt   DateTime        @default(now())
 
   @@index([userId, day])
+}
+
+// ============================================================
+// Plyometrics + Progress Photos — v4 Fase 6
+// ============================================================
+
+enum PhotoPose {
+  FRONT
+  SIDE
+  BACK
+}
+
+// A completed plyometrics session (contacts tracked for joint safety).
+model PlyoSession {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  drills        String[] // drill slugs performed
+  totalContacts Int
+  durationS     Int
+  startedAt     DateTime @default(now())
+
+  @@index([userId, startedAt])
+}
+
+// Private progress photo reference (file lives in the Supabase Storage bucket
+// "progress-photos" under {userId}/..., never public). Only metadata here.
+model ProgressPhoto {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pose       PhotoPose
+  storagePath String   // e.g. "{userId}/front-1731700000.jpg"
+  takenAt    DateTime  @default(now())
+
+  @@index([userId, takenAt])
 }

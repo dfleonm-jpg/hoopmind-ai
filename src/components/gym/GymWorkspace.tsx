@@ -11,7 +11,11 @@ import {
   type MuscleRecovery,
 } from "@/components/gym/BodySkeletonSVG";
 import { RestTimer } from "@/components/gym/RestTimer";
+import { AnthropometryGuide } from "@/components/gym/AnthropometryGuide";
+import { ProgressPhotos } from "@/components/gym/ProgressPhotos";
 import type { MuscleGroup } from "@/lib/gym/catalog";
+
+type GymTab = "train" | "anthro" | "progress";
 
 interface ApiExercise {
   id: string;
@@ -61,6 +65,7 @@ export function GymWorkspace() {
 
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [reloadRecovery, setReloadRecovery] = React.useState(0);
+  const [tab, setTab] = React.useState<GymTab>("train");
 
   // Load recovery map.
   React.useEffect(() => {
@@ -132,22 +137,64 @@ export function GymWorkspace() {
 
   async function finishSession() {
     if (!sessionId) return;
+    let awardXpAmount: number | null = null;
+    let leveledUp = false;
     try {
-      await fetch(`/api/gym/sessions/${sessionId}`, {
+      const res = await fetch(`/api/gym/sessions/${sessionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ endedAt: true }),
       });
+      const data = (await res.json().catch(() => null)) as {
+        award?: { xp: number; leveledUp: boolean } | null;
+      } | null;
+      if (data?.award) {
+        awardXpAmount = data.award.xp;
+        leveledUp = data.award.leveledUp;
+      }
     } catch {
       /* ignore */
     }
     setSessionId(null);
     setReloadRecovery((k) => k + 1);
-    toast("Sesión guardada.", "success");
+    toast(
+      awardXpAmount != null
+        ? `Sesión guardada.${leveledUp ? " ¡Subiste de nivel!" : ""}`
+        : "Sesión guardada.",
+      "success",
+    );
   }
+
+  const tabs: { v: GymTab; l: string }[] = [
+    { v: "train", l: "Entrenar" },
+    { v: "anthro", l: "Antropometría" },
+    { v: "progress", l: "Progreso" },
+  ];
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Tabs (v4 Fase 6) */}
+      <div role="tablist" aria-label="Secciones de gym" className="bg-card border-border flex rounded-xl border p-1">
+        {tabs.map((t) => (
+          <button
+            key={t.v}
+            role="tab"
+            aria-selected={tab === t.v}
+            onClick={() => setTab(t.v)}
+            className={`min-h-touch flex-1 rounded-lg text-sm font-semibold transition-colors ${
+              tab === t.v ? "bg-accent text-on-accent" : "text-fg-muted"
+            }`}
+          >
+            {t.l}
+          </button>
+        ))}
+      </div>
+
+      {tab === "anthro" ? <AnthropometryGuide /> : null}
+      {tab === "progress" ? <ProgressPhotos /> : null}
+
+      {tab === "train" ? (
+      <>
       {/* Anatomy map */}
       <Card variant="glass" className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -230,6 +277,8 @@ export function GymWorkspace() {
 
       {/* Measurements */}
       <MeasurementCard onSaved={() => toast("Medida registrada.", "success")} />
+      </>
+      ) : null}
 
       {/* Exercise detail / set logger */}
       {openEx ? (

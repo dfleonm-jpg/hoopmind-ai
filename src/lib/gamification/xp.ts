@@ -19,6 +19,17 @@ export function xpForSession({
   return XP_PER_COMPLETED_SESSION + made * XP_PER_MADE_SHOT + streakBonus;
 }
 
+/** Cross-module XP awards (v4 Fase 6): unify XP across the ecosystem. */
+export const XP_AWARDS = {
+  GYM_SESSION: 40,
+  GYM_PR: 15, // per personal record
+  PLYO_SESSION: 35,
+  RECOVERY_CHECKIN: 15,
+  NUTRITION_DAY_LOGGED: 10,
+} as const;
+
+export type XpSource = keyof typeof XP_AWARDS;
+
 /** Cumulative XP required to REACH a given level (level >= 1). */
 export function xpThresholdForLevel(level: number): number {
   if (level <= 1) return 0;

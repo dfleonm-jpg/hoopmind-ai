@@ -13,6 +13,12 @@ const ShotAnalyzer = dynamic(
   },
 );
 
-export function AnalyzeClient({ sessionId }: { sessionId?: string }) {
-  return <ShotAnalyzer sessionId={sessionId} />;
+export function AnalyzeClient({
+  sessionId,
+  femurClass,
+}: {
+  sessionId?: string;
+  femurClass?: "LONG_FEMUR" | "BALANCED" | "SHORT_LEVER" | null;
+}) {
+  return <ShotAnalyzer sessionId={sessionId} femurClass={femurClass ?? null} />;
 }
