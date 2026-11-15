@@ -1,0 +1,92 @@
+"use client";
+
+import * as React from "react";
+import { Button } from "@/components/ui/button";
+import { playCue, unlockAudio } from "@/lib/audio/feedback";
+import { ZONE_IDS } from "@/lib/validation/session";
+
+const ZONE_LABELS: Record<string, string> = {
+  left_corner_3: "Esq. izq. 3",
+  left_wing_3: "Ala izq. 3",
+  top_key_3: "Frontal 3",
+  right_wing_3: "Ala der. 3",
+  right_corner_3: "Esq. der. 3",
+  left_mid: "Media izq.",
+  center_mid: "Media centro",
+  right_mid: "Media der.",
+  paint: "Zona",
+  free_throw: "Tiro libre",
+};
+
+export function ShotCounter({
+  made,
+  attempted,
+  zone,
+  onZoneChange,
+  onMade,
+  onAttempt,
+}: {
+  made: number;
+  attempted: number;
+  zone: string;
+  onZoneChange: (zone: string) => void;
+  onMade: () => void;
+  onAttempt: () => void;
+}) {
+  const pct = attempted > 0 ? Math.round((made / attempted) * 100) : 0;
+
+  function handleMade() {
+    unlockAudio();
+    playCue("made");
+    onMade();
+  }
+  function handleMiss() {
+    unlockAudio();
+    playCue("attempt");
+    onAttempt();
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="text-fg-muted text-xs">Zona de tiro</span>
+        <span className="text-fg text-sm font-semibold tabular-nums">
+          {made}/{attempted} · {pct}%
+        </span>
+      </div>
+
+      <select
+        value={zone}
+        onChange={(e) => onZoneChange(e.target.value)}
+        aria-label="Zona de tiro"
+        className="bg-bg text-fg border-border min-h-touch w-full rounded-xl border px-3 text-base"
+      >
+        {ZONE_IDS.map((z) => (
+          <option key={z} value={z}>
+            {ZONE_LABELS[z] ?? z}
+          </option>
+        ))}
+      </select>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Button
+          size="lg"
+          onClick={handleMade}
+          className="h-20 text-lg"
+          aria-label="Tiro encestado"
+        >
+          ✓ Encestado
+        </Button>
+        <Button
+          size="lg"
+          variant="secondary"
+          onClick={handleMiss}
+          className="h-20 text-lg"
+          aria-label="Tiro fallado"
+        >
+          ✕ Fallado
+        </Button>
+      </div>
+    </div>
+  );
+}
