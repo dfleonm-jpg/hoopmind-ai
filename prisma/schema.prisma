@@ -93,6 +93,7 @@ model Workout {
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
   scenario    Scenario
+  format      PlayFormat     @default(FIVE_V_FIVE) // captured from profile at generation
   durationMin Int // 30 | 45 | 60
   difficulty  Int            @default(3) // 1–5, ajustado progresivamente
   content     Json // WorkoutSchema validado (fuente de verdad)

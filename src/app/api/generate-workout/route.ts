@@ -89,6 +89,7 @@ export async function POST(request: Request) {
       userId: user.id,
       title: workout.title,
       scenario: input.scenario,
+      format: profile.format,
       durationMin: input.durationMin,
       difficulty,
       content: workout,

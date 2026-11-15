@@ -10,7 +10,8 @@ import { Card } from "@/components/ui/card";
 import { TacticBoard } from "@/components/tactic-board/TacticBoard";
 import { BlockTimer } from "./BlockTimer";
 import { ShotCounter } from "./ShotCounter";
-import { playCue, toggleMuted, isMuted } from "@/lib/audio/feedback";
+import { playCue, toggleMuted } from "@/lib/audio/feedback";
+import { sendOrQueue } from "@/lib/offline/sync-queue";
 
 const BLOCK_LABELS: Record<string, string> = {
   WARMUP: "Calentamiento",
@@ -51,9 +52,13 @@ export function ActiveSession({
   const [showBoard, setShowBoard] = React.useState(false);
   const [finishing, setFinishing] = React.useState(false);
 
-  const [, bump] = React.useReducer((n: number) => n + 1, 0);
-  const startedAtRef = React.useRef<number>(Date.now());
-  const shotsRef = React.useRef<Map<ShotKey, ShotAgg>>(new Map());
+  const [shots, setShots] = React.useState<Record<ShotKey, ShotAgg>>({});
+  const startedAtRef = React.useRef<number>(0);
+
+  // Record the session start time once, outside render (lint: no impure calls in render).
+  React.useEffect(() => {
+    startedAtRef.current = Date.now();
+  }, []);
 
   // Create the session once on mount.
   React.useEffect(() => {
@@ -94,18 +99,26 @@ export function ActiveSession({
   const globalExIndex = exerciseIds
     .slice(0, blockIdx)
     .reduce((sum, arr) => sum + arr.length, 0) + exIdx;
-  const dbExerciseId = exerciseIds[blockIdx]?.[exIdx] ?? null;
   const isLastExercise =
     blockIdx === blocks.length - 1 && exIdx === block.exercises.length - 1;
 
+  const currentKey = `${globalExIndex}:${zone}`;
+  const currentAgg = shots[currentKey];
+
   function recordShot(made: boolean) {
-    const key = `${globalExIndex}:${zone}`;
-    const prev =
-      shotsRef.current.get(key) ??
-      { exIndex: globalExIndex, zone, made: 0, attempted: 0 };
-    prev.attempted += 1;
-    if (made) prev.made += 1;
-    shotsRef.current.set(key, prev);
+    setShots((prev) => {
+      const existing =
+        prev[currentKey] ??
+        { exIndex: globalExIndex, zone, made: 0, attempted: 0 };
+      return {
+        ...prev,
+        [currentKey]: {
+          ...existing,
+          attempted: existing.attempted + 1,
+          made: existing.made + (made ? 1 : 0),
+        },
+      };
+    });
   }
 
   function nextExercise() {
@@ -124,19 +137,16 @@ export function ActiveSession({
   }
 
   async function persistShots(sid: string) {
-    const entries = Array.from(shotsRef.current.values());
+    const entries = Object.values(shots);
+    // Route through the offline queue so writes survive loss of connectivity.
     await Promise.all(
       entries.map((agg) => {
         const exerciseId = resolveExerciseId(exerciseIds, agg.exIndex);
-        return fetch(`/api/sessions/${sid}/shots`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            exerciseId,
-            zone: agg.zone,
-            made: agg.made,
-            attempted: agg.attempted,
-          }),
+        return sendOrQueue(`/api/sessions/${sid}/shots`, "POST", {
+          exerciseId,
+          zone: agg.zone,
+          made: agg.made,
+          attempted: agg.attempted,
         }).catch(() => null);
       }),
     );
@@ -144,7 +154,8 @@ export function ActiveSession({
 
   async function finishSession(status: "COMPLETED" | "ABANDONED") {
     setFinishing(true);
-    const realDurationS = Math.round((Date.now() - startedAtRef.current) / 1000);
+    const startedAt = startedAtRef.current || Date.now();
+    const realDurationS = Math.round((Date.now() - startedAt) / 1000);
     try {
       let sid = sessionId;
       if (!sid) {
@@ -158,10 +169,9 @@ export function ActiveSession({
       }
       if (sid) {
         await persistShots(sid);
-        await fetch(`/api/sessions/${sid}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status, realDurationS }),
+        await sendOrQueue(`/api/sessions/${sid}`, "PATCH", {
+          status,
+          realDurationS,
         });
       }
     } catch {
@@ -200,10 +210,10 @@ export function ActiveSession({
       {/* Timer */}
       <Card className="flex flex-col gap-4">
         <BlockTimer
+          key={blockIdx}
           durationS={block.durationMin * 60}
           running={running}
           onComplete={handleBlockTimeUp}
-          resetKey={blockIdx}
         />
         <div className="flex gap-2">
           {running ? (
@@ -242,20 +252,12 @@ export function ActiveSession({
       {/* Shot counter */}
       <Card>
         <ShotCounter
-          made={shotsRef.current.get(`${globalExIndex}:${zone}`)?.made ?? 0}
-          attempted={
-            shotsRef.current.get(`${globalExIndex}:${zone}`)?.attempted ?? 0
-          }
+          made={currentAgg?.made ?? 0}
+          attempted={currentAgg?.attempted ?? 0}
           zone={zone}
           onZoneChange={setZone}
-          onMade={() => {
-            recordShot(true);
-            bump(); // re-render so the counter reflects the new totals
-          }}
-          onAttempt={() => {
-            recordShot(false);
-            bump();
-          }}
+          onMade={() => recordShot(true)}
+          onAttempt={() => recordShot(false)}
         />
       </Card>
 

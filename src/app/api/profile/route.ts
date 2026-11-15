@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { getAuthUser } from "@/lib/supabase/auth";
 import { prisma } from "@/lib/db/prisma";
 import { ProfileInputSchema } from "@/lib/validation/profile";

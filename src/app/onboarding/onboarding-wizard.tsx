@@ -39,7 +39,7 @@ function emptyDraft(initial?: ProfileInput | null): Draft {
   };
 }
 
-function Choice<T extends string>({
+function Choice({
   label,
   selected,
   onSelect,
