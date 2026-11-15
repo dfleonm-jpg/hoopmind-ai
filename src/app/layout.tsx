@@ -4,6 +4,8 @@ import "./globals.css";
 import { PwaBootstrap } from "@/components/pwa/PwaBootstrap";
 import { ToastProvider } from "@/components/ui/toast";
 import { AppChrome } from "@/components/nav/AppChrome";
+import { PageTransition } from "@/components/nav/PageTransition";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,9 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HoopMind AI",
+  title: "HoopMind · Become Unstoppable",
   description:
-    "Entrenamiento de baloncesto impulsado por IA para jugadores de 5v5 y 3x3.",
+    "Ecosistema de rendimiento con IA: baloncesto, gimnasio, pliometría, nutrición, recuperación y tu coach personal.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -48,8 +50,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="bg-bg text-fg min-h-full flex flex-col">
         <PwaBootstrap />
         <ToastProvider>
-          {children}
+          <PageTransition>{children}</PageTransition>
           <AppChrome />
+          <InstallPrompt />
         </ToastProvider>
       </body>
     </html>

@@ -1,14 +1,16 @@
-/* HoopMind AI service worker — app shell + last-visited runtime cache. */
-const VERSION = "v1";
+/* HoopMind service worker — app shell + offline fallback + runtime cache. */
+const VERSION = "v2";
 const SHELL_CACHE = `hoopmind-shell-${VERSION}`;
 const RUNTIME_CACHE = `hoopmind-runtime-${VERSION}`;
 
 const SHELL_ASSETS = [
   "/",
   "/dashboard",
+  "/offline.html",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
+  "/icons/icon-maskable-512.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -45,7 +47,7 @@ self.addEventListener("fetch", (event) => {
   // Never cache API responses (auth/data correctness).
   if (url.pathname.startsWith("/api/")) return;
 
-  // Navigation: network-first, fall back to cached page / dashboard shell.
+  // Navigation: network-first; on failure serve cached page, then offline.html.
   if (req.mode === "navigate") {
     event.respondWith(
       fetch(req)
@@ -59,13 +61,18 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(async () => {
           const cached = await caches.match(req);
-          return cached || (await caches.match("/dashboard")) || Response.error();
+          return (
+            cached ||
+            (await caches.match("/dashboard")) ||
+            (await caches.match("/offline.html")) ||
+            Response.error()
+          );
         }),
     );
     return;
   }
 
-  // Static assets: cache-first.
+  // Static assets: cache-first with background refresh.
   event.respondWith(
     caches.match(req).then(
       (cached) =>

@@ -73,7 +73,7 @@ export function BottomNav() {
       aria-label="Navegación principal"
       className="pb-safe fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-3"
     >
-      <ul className="glass flex items-center gap-1 rounded-full px-2 py-1.5 shadow-lg shadow-black/40">
+      <ul className="glass flex items-center gap-0.5 rounded-full px-2 py-1.5">
         {ITEMS.map((item) => {
           const active = item.match(pathname);
           return (
@@ -82,19 +82,25 @@ export function BottomNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "relative flex min-h-touch min-w-touch flex-col items-center justify-center gap-0.5 rounded-full px-3 py-1.5",
+                  "relative flex min-h-touch min-w-touch flex-col items-center justify-center gap-0.5 rounded-full px-3.5 py-1.5 transition-colors",
                   active ? "text-on-accent" : "text-fg-muted hover:text-fg",
                 )}
               >
                 {active ? (
                   <motion.span
                     layoutId="pilldock-active"
-                    className="bg-accent absolute inset-0 rounded-full"
-                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                    className="bg-gradient-to-b from-accent-hover to-accent glow-accent absolute inset-0 rounded-full"
+                    transition={{ type: "spring", stiffness: 480, damping: 34 }}
                   />
                 ) : null}
-                <span className="relative z-10">{item.icon}</span>
-                <span className="relative z-10 text-[10px] font-semibold">
+                <motion.span
+                  className="relative z-10"
+                  animate={{ scale: active ? 1.06 : 1, y: active ? -1 : 0 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 26 }}
+                >
+                  {item.icon}
+                </motion.span>
+                <span className="relative z-10 text-[10px] font-semibold tracking-wide">
                   {item.label}
                 </span>
               </Link>
