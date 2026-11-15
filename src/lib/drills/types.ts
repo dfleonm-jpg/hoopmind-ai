@@ -41,12 +41,23 @@ export interface DrillEntity {
 export type DrillId =
   | "pick_and_roll"
   | "dribble_drive_stepback"
-  | "catch_and_shoot_move";
+  | "catch_and_shoot_move"
+  | "give_and_go"
+  | "horns_set"
+  | "iso_cross_jab"
+  | "three_v_three_motion"
+  | "backdoor_cut";
+
+/** Which game format a drill applies to, for filtering in /plays. */
+export type DrillFormat = "ALL" | "FIVE_V_FIVE" | "THREE_X_THREE";
 
 export interface Drill {
   id: DrillId;
   name: string;
   description: string;
+  format: DrillFormat;
+  /** Key execution cues shown in /plays. */
+  keyCues: string[];
   entities: DrillEntity[];
   steps: DrillStep[];
 }

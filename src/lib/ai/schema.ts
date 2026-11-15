@@ -16,6 +16,11 @@ export const DrillIdEnum = z.enum([
   "pick_and_roll",
   "dribble_drive_stepback",
   "catch_and_shoot_move",
+  "give_and_go",
+  "horns_set",
+  "iso_cross_jab",
+  "three_v_three_motion",
+  "backdoor_cut",
 ]);
 
 export const ExerciseSchema = z.object({
