@@ -82,6 +82,7 @@ model User {
   habitLogs      HabitLog[]
   careRoutines   CareRoutine[]
   aiConversations AiConversation[]
+  plannerEvents  PlannerEvent[]
 }
 
 model Profile {
@@ -528,4 +529,30 @@ model AiMessage {
   createdAt      DateTime       @default(now())
 
   @@index([conversationId, createdAt])
+}
+
+// ============================================================
+// Life OS — v4 Fase 5
+// ============================================================
+
+enum PlannerCategory {
+  TRAINING
+  GYM
+  NUTRITION
+  RECOVERY
+  PERSONAL
+}
+
+model PlannerEvent {
+  id          String          @id @default(uuid()) @db.Uuid
+  userId      String          @db.Uuid
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  category    PlannerCategory @default(PERSONAL)
+  day         String // YYYY-MM-DD (UTC)
+  time        String? // "HH:MM" optional
+  done        Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+
+  @@index([userId, day])
 }

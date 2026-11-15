@@ -389,6 +389,11 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
             Glow Up
           </Button>
         </Link>
+        <Link href="/life">
+          <Button variant="secondary" className="w-full">
+            Life OS
+          </Button>
+        </Link>
         <Link href="/combine">
           <Button variant="secondary" className="w-full">
             Pruebas Combine
