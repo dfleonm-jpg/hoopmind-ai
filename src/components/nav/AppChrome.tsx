@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { BottomNav } from "@/components/nav/BottomNav";
 import { SideNav } from "@/components/nav/SideNav";
+import { CommandPalette } from "@/components/nav/CommandPalette";
 
 /** Routes where app navigation should NOT appear. */
 const HIDE_ON = ["/", "/login", "/train"];
@@ -23,6 +24,7 @@ export function AppChrome() {
     <>
       <SideNav />
       <BottomNav />
+      <CommandPalette />
     </>
   );
 }
