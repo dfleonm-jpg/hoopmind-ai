@@ -363,6 +363,16 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
             Nutrición
           </Button>
         </Link>
+        <Link href="/recovery">
+          <Button variant="secondary" className="w-full">
+            Recovery
+          </Button>
+        </Link>
+        <Link href="/glowup">
+          <Button variant="secondary" className="w-full">
+            Glow Up
+          </Button>
+        </Link>
         <Link href="/combine">
           <Button variant="secondary" className="w-full">
             Pruebas Combine

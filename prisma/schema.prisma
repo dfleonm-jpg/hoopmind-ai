@@ -77,6 +77,10 @@ model User {
   nutritionGoal  NutritionGoal?
   foodLogs       FoodLog[]
   hydrationLogs  HydrationLog[]
+  recoveryLogs   RecoveryLog[]
+  habits         Habit[]
+  habitLogs      HabitLog[]
+  careRoutines   CareRoutine[]
 }
 
 model Profile {
@@ -410,4 +414,75 @@ model HydrationLog {
   amountMl  Int
 
   @@index([userId, loggedAt])
+}
+
+// ============================================================
+// Recovery & Longevity + Glow Up — v4 Fase 3
+// ============================================================
+
+enum CareCategory {
+  SKINCARE
+  HAIRCARE
+  GROOMING
+  POSTURE
+}
+
+// Daily recovery check-in (subjective 1–5 scales + sleep).
+model RecoveryLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loggedAt       DateTime @default(now())
+  sleepHours     Float?
+  sleepQuality   Int? // 1–5
+  fatigue        Int? // 1–5 (5 = very fatigued)
+  soreness       Int? // 1–5
+  stress         Int? // 1–5
+  energy         Int? // 1–5 (5 = high)
+  mood           Int? // 1–5
+  notes          String?
+
+  @@index([userId, loggedAt])
+}
+
+// Habits the user tracks (daily consistency).
+model Habit {
+  id        String     @id @default(uuid()) @db.Uuid
+  userId    String     @db.Uuid
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  icon      String?    // emoji / short tag
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  logs      HabitLog[]
+
+  @@index([userId])
+}
+
+model HabitLog {
+  id       String   @id @default(uuid()) @db.Uuid
+  habitId  String   @db.Uuid
+  habit    Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  userId   String   @db.Uuid
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day      String // YYYY-MM-DD (UTC) — one completion per day
+  createdAt DateTime @default(now())
+
+  @@unique([habitId, day])
+  @@index([userId, day])
+}
+
+// Glow Up care routines (skincare/haircare/grooming/posture) with step lists.
+model CareRoutine {
+  id        String       @id @default(uuid()) @db.Uuid
+  userId    String       @db.Uuid
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  CareCategory
+  title     String
+  steps     String[]
+  timeOfDay String? // "AM" | "PM" | null
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([userId, category])
 }
