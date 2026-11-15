@@ -358,6 +358,11 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
             Body Transformation
           </Button>
         </Link>
+        <Link href="/nutrition">
+          <Button variant="secondary" className="w-full">
+            Nutrición
+          </Button>
+        </Link>
         <Link href="/combine">
           <Button variant="secondary" className="w-full">
             Pruebas Combine

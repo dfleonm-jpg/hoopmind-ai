@@ -74,6 +74,9 @@ model User {
   combineResults CombineResult[]
   gymSessions    GymSession[]
   bodyMeasurements BodyMeasurement[]
+  nutritionGoal  NutritionGoal?
+  foodLogs       FoodLog[]
+  hydrationLogs  HydrationLog[]
 }
 
 model Profile {
@@ -91,6 +94,10 @@ model Profile {
   // Gamification (v2): XP accrues per completed session; gameLevel recalculated on close.
   xp         Int        @default(0)
   gameLevel  Int        @default(1)
+  // Nutrition (v4): optional fields for energy calculations.
+  age        Int?
+  sex        BiologicalSex?
+  activityLevel ActivityLevel @default(MODERATE)
   updatedAt  DateTime   @updatedAt
 }
 
@@ -325,4 +332,82 @@ model BodyMeasurement {
   notes       String?
 
   @@index([userId, measuredAt])
+}
+
+// ============================================================
+// Nutrition Intelligence — v4 Fase 2
+// ============================================================
+
+enum BiologicalSex {
+  MALE
+  FEMALE
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+  VERY_ACTIVE
+}
+
+enum NutritionObjective {
+  MUSCLE_GAIN
+  MAINTENANCE
+  PERFORMANCE
+  RECOMPOSITION
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+// Per-user daily nutrition targets (computed; editable).
+model NutritionGoal {
+  id           String             @id @default(uuid()) @db.Uuid
+  userId       String             @unique @db.Uuid
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  objective    NutritionObjective @default(MAINTENANCE)
+  calories     Int
+  proteinG     Int
+  carbsG       Int
+  fatG         Int
+  fiberG       Int                @default(28)
+  waterMl      Int                @default(2500)
+  updatedAt    DateTime           @updatedAt
+}
+
+// A logged food entry (denormalized per-100g macros kept on the row so history
+// is stable even if an external catalog item changes later).
+model FoodLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loggedAt   DateTime @default(now())
+  mealType   MealType
+  name       String
+  // External source reference (e.g. Open Food Facts barcode / USDA fdcId), if any.
+  sourceRef  String?
+  quantityG  Float // grams consumed
+  // Macros for the consumed quantity (already scaled).
+  calories   Float
+  proteinG   Float
+  carbsG     Float
+  fatG       Float
+  fiberG     Float    @default(0)
+
+  @@index([userId, loggedAt])
+}
+
+model HydrationLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loggedAt  DateTime @default(now())
+  amountMl  Int
+
+  @@index([userId, loggedAt])
 }
