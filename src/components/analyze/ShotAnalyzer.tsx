@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { SkeletonOverlay } from "@/components/analyze/SkeletonOverlay";
 import {
   CONFIDENCE_THRESHOLD,
   type PoseEngine,
@@ -162,14 +163,36 @@ export function ShotAnalyzer({ sessionId }: { sessionId?: string }) {
           className={`w-full rounded-xl ${status === "recording" ? "block" : "hidden"}`}
         />
 
-        {/* Recorded/uploaded playback */}
+        {/* Recorded/uploaded playback with skeleton overlay at the release frame */}
         {videoUrl && status !== "recording" ? (
-          <video
-            src={videoUrl}
-            controls
-            playsInline
-            className="w-full rounded-xl"
-          />
+          <div className="relative w-full overflow-hidden rounded-xl">
+            <video
+              src={videoUrl}
+              controls
+              playsInline
+              className="w-full rounded-xl"
+            />
+            {result?.keyframe && !lowConfidence ? (
+              <SkeletonOverlay
+                keyframe={result.keyframe}
+                elbowAngle={result.elbowAngle}
+                kneeAngle={result.kneeFlexion}
+                className="pointer-events-none absolute inset-0 h-full w-full"
+              />
+            ) : null}
+          </div>
+        ) : null}
+
+        {result?.keyframe && !lowConfidence ? (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <span className="text-fg-muted flex items-center gap-1.5">
+              <span className="bg-success h-2.5 w-2.5 rounded-full" /> Rango
+              óptimo
+            </span>
+            <span className="text-fg-muted flex items-center gap-1.5">
+              <span className="bg-accent h-2.5 w-2.5 rounded-full" /> Ajustar
+            </span>
+          </div>
         ) : null}
 
         <div className="flex flex-col gap-2 sm:flex-row">

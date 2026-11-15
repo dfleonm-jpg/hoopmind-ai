@@ -1,6 +1,10 @@
 "use client";
 
-import type { PoseEngine, ShotAnalysisResult } from "@/lib/pose/types";
+import type {
+  PoseEngine,
+  PoseKeyframe,
+  ShotAnalysisResult,
+} from "@/lib/pose/types";
 
 // Landmark indices (MediaPipe Pose, 33 points).
 const L = {
@@ -91,6 +95,7 @@ export class MediaPipePoseEngine implements PoseEngine {
       knee: number;
       wristY: number;
       conf: number;
+      keyframe: PoseKeyframe;
     }[] = [];
 
     for (let i = 0; i < FRAMES; i++) {
@@ -124,6 +129,14 @@ export class MediaPipePoseEngine implements PoseEngine {
         knee: angle(hip, kn, an),
         wristY: wr.y, // normalized; smaller = higher in frame
         conf,
+        keyframe: {
+          shoulder: { x: sh.x, y: sh.y },
+          elbow: { x: el.x, y: el.y },
+          wrist: { x: wr.x, y: wr.y },
+          hip: { x: hip.x, y: hip.y },
+          knee: { x: kn.x, y: kn.y },
+          ankle: { x: an.x, y: an.y },
+        },
       });
     }
 
@@ -152,6 +165,7 @@ export class MediaPipePoseEngine implements PoseEngine {
       kneeFlexion: round1(dip.knee),
       releaseMs: Math.round(release.tMs),
       confidence: Math.min(1, Math.max(0, round2(confidence))),
+      keyframe: release.keyframe,
     };
   }
 
