@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { PhotoCalorieCounter } from "@/components/nutrition/PhotoCalorieCounter";
 
 interface Goal {
   objective: string;
@@ -314,6 +315,9 @@ export function NutritionWorkspace() {
           </div>
         </Card>
       ) : null}
+
+      {/* Camera calorie counter */}
+      <PhotoCalorieCounter onLogged={() => setReload((k) => k + 1)} />
 
       {/* Food search + log */}
       <Card className="flex flex-col gap-3">
