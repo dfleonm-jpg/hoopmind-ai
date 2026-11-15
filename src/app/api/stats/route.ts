@@ -9,6 +9,7 @@ import {
   resolveBadges,
   splitZonePerf,
 } from "@/lib/gamification/archetype";
+import { computeOvr } from "@/lib/gamification/ovr";
 
 type PlayFormat = "FIVE_V_FIVE" | "THREE_X_THREE";
 
@@ -88,7 +89,7 @@ async function buildGamification(
   userId: string,
   streak: { current: number; best: number },
 ) {
-  const [profile, allSessions, analysesCount] = await Promise.all([
+  const [profile, allSessions, analyses, combine] = await Promise.all([
     prisma.profile.findUnique({
       where: { userId },
       select: { xp: true, gameLevel: true },
@@ -101,8 +102,16 @@ async function buildGamification(
         shotLogs: { select: { zone: true, made: true, attempted: true } },
       },
     }),
-    prisma.shotAnalysis.count({ where: { session: { userId } } }),
+    prisma.shotAnalysis.findMany({
+      where: { session: { userId } },
+      select: { confidence: true },
+    }),
+    prisma.combineResult.findMany({
+      where: { userId },
+      select: { score: true, maxScore: true },
+    }),
   ]);
+  const analysesCount = analyses.length;
 
   // Career zone aggregates.
   const careerZones = new Map<string, { made: number; attempted: number }>();
@@ -151,6 +160,30 @@ async function buildGamification(
   const xp = profile?.xp ?? 0;
   const progress = levelProgress(xp);
 
+  // OVR (60–99) + attributes from career data, combine and biomechanics.
+  const careerMade = zoneArr.reduce((s, z) => s + z.made, 0);
+  const careerAtt = zoneArr.reduce((s, z) => s + z.attempted, 0);
+  const overallPct = careerAtt > 0 ? careerMade / careerAtt : 0;
+  const bioScore =
+    analyses.length > 0
+      ? analyses.reduce((s, a) => s + a.confidence, 0) / analyses.length
+      : 0;
+  const bestCombinePct = combine.reduce(
+    (best, c) => Math.max(best, c.maxScore > 0 ? c.score / c.maxScore : 0),
+    0,
+  );
+  const ovr = computeOvr({
+    overallPct,
+    threePct: split.threePct,
+    threeAttempts: split.threeAttempts,
+    threeXThreeCompleted,
+    totalCompleted,
+    bestStreak: streak.best,
+    bioScore,
+    bioCount: analyses.length,
+    bestCombinePct,
+  });
+
   return {
     xp,
     level: progress.level,
@@ -159,6 +192,8 @@ async function buildGamification(
     xpForNext: progress.span,
     archetype,
     badges,
+    ovr: ovr.ovr,
+    attributes: ovr.attributes,
   };
 }
 

@@ -299,9 +299,19 @@ export function DashboardView({ workouts }: { workouts: WorkoutItem[] }) {
 
       {/* Quick links */}
       <div className="grid grid-cols-2 gap-3">
+        <Link href="/combine">
+          <Button variant="secondary" className="w-full">
+            Pruebas Combine
+          </Button>
+        </Link>
         <Link href="/analyze">
           <Button variant="secondary" className="w-full">
             Analizar tiro
+          </Button>
+        </Link>
+        <Link href="/plays">
+          <Button variant="secondary" className="w-full">
+            Pizarra / Jugadas
           </Button>
         </Link>
         <Link href="/onboarding">

@@ -4,6 +4,8 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { SkeletonOverlay } from "@/components/analyze/SkeletonOverlay";
+import { FramingGuide } from "@/components/analyze/FramingGuide";
+import { DiagnosisCard } from "@/components/analyze/DiagnosisCard";
 import {
   CONFIDENCE_THRESHOLD,
   type PoseEngine,
@@ -155,13 +157,15 @@ export function ShotAnalyzer({ sessionId }: { sessionId?: string }) {
           servidor.
         </CardDescription>
 
-        {/* Live preview while recording */}
-        <video
-          ref={previewRef}
-          playsInline
-          muted
-          className={`w-full rounded-xl ${status === "recording" ? "block" : "hidden"}`}
-        />
+        {/* Live preview + framing-guide silhouette (before/while recording) */}
+        <div
+          className={`relative w-full overflow-hidden rounded-xl ${
+            status === "recording" ? "block" : "hidden"
+          }`}
+        >
+          <video ref={previewRef} playsInline muted className="w-full" />
+          <FramingGuide />
+        </div>
 
         {/* Recorded/uploaded playback with skeleton overlay at the release frame */}
         {videoUrl && status !== "recording" ? (
@@ -281,6 +285,9 @@ export function ShotAnalyzer({ sessionId }: { sessionId?: string }) {
           ) : null}
         </Card>
       ) : null}
+
+      {/* Guided diagnosis: comparative bars + immediate correction (v3) */}
+      {result && !lowConfidence ? <DiagnosisCard result={result} /> : null}
     </div>
   );
 }
