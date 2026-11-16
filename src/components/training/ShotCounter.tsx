@@ -50,8 +50,15 @@ export function ShotCounter({
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <span className="text-fg-muted text-xs">Zona de tiro</span>
-        <span className="text-fg text-sm font-semibold tabular-nums">
-          {made}/{attempted} · {pct}%
+        <span className="text-sm font-bold tabular-nums">
+          <span className="text-fg">{made}/{attempted}</span>
+          <span
+            className={
+              pct >= 50 ? "text-success ml-1.5" : "text-fg-muted ml-1.5"
+            }
+          >
+            {pct}%
+          </span>
         </span>
       </div>
 
@@ -72,7 +79,7 @@ export function ShotCounter({
         <Button
           size="lg"
           onClick={handleMade}
-          className="h-20 text-lg"
+          className="from-success to-success-dim h-20 bg-gradient-to-b text-lg text-on-accent shadow-[0_8px_28px_-10px_var(--color-success)] active:scale-[0.97]"
           aria-label="Tiro encestado"
         >
           ✓ Encestado

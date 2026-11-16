@@ -10,21 +10,48 @@ import { Legend } from "./Legend";
 
 type Phase = "idle" | "playing" | "paused" | "done";
 
-export function TacticBoard({ drill }: { drill: Drill }) {
+export interface TacticBoardProps {
+  drill: Drill;
+  /** Playback speed multiplier (0.5x / 1x / 1.5x). */
+  speed?: number;
+  /** Loop continuously and hide controls/legend (landing preview). */
+  autoLoop?: boolean;
+  /** Hide the title block (when a parent renders its own header). */
+  hideTitle?: boolean;
+  /** Show the 0.5x/1x/1.5x speed selector. */
+  showSpeedControl?: boolean;
+  onSpeedChange?: (speed: number) => void;
+}
+
+const SPEEDS = [0.5, 1, 1.5] as const;
+
+export function TacticBoard({
+  drill,
+  speed = 1,
+  autoLoop = false,
+  hideTitle = false,
+  showSpeedControl = false,
+  onSpeedChange,
+}: TacticBoardProps) {
   const reduce = useReducedMotion();
   const [stepIndex, setStepIndex] = React.useState(0);
-  const [phase, setPhase] = React.useState<Phase>("idle");
+  const [phase, setPhase] = React.useState<Phase>(autoLoop ? "playing" : "idle");
   const lastStep = drill.steps.length - 1;
   const step = drill.steps[stepIndex];
 
-  // When playing, advance to the next step after the current step's longest move.
+  // To switch drills, remount via a `key` prop from the parent (e.g. /plays).
+  // That keeps state init clean and avoids a reset-in-effect.
+
+  // When playing, advance after the current step's longest move (scaled by speed).
   React.useEffect(() => {
     if (phase !== "playing" || reduce) return;
-    const dur =
+    const base =
       Math.max(0, ...(step?.moves.map((m) => m.durationMs) ?? [0])) + 350;
+    const dur = base / Math.max(0.25, speed);
     const t = setTimeout(() => {
       setStepIndex((i) => {
         if (i >= lastStep) {
+          if (autoLoop) return 0; // loop
           setPhase("done");
           return i;
         }
@@ -32,7 +59,7 @@ export function TacticBoard({ drill }: { drill: Drill }) {
       });
     }, dur);
     return () => clearTimeout(t);
-  }, [phase, stepIndex, step, lastStep, reduce]);
+  }, [phase, stepIndex, step, lastStep, reduce, speed, autoLoop]);
 
   const playing = phase === "playing" && !reduce;
 
@@ -56,12 +83,25 @@ export function TacticBoard({ drill }: { drill: Drill }) {
     setStepIndex((i) => Math.min(lastStep, i + 1));
   }
 
+  // Compact, non-interactive looping preview (landing page).
+  if (autoLoop) {
+    return (
+      <div className="border-border overflow-hidden rounded-xl border">
+        <CourtSVG>
+          <DrillLayer drill={drill} stepIndex={stepIndex} playing={playing} />
+        </CourtSVG>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
-      <div>
-        <h3 className="text-fg text-lg font-semibold">{drill.name}</h3>
-        <p className="text-fg-muted text-sm">{drill.description}</p>
-      </div>
+      {!hideTitle ? (
+        <div>
+          <h3 className="text-fg text-lg font-semibold">{drill.name}</h3>
+          <p className="text-fg-muted text-sm">{drill.description}</p>
+        </div>
+      ) : null}
 
       <div className="border-border overflow-hidden rounded-xl border">
         <CourtSVG>
@@ -80,6 +120,22 @@ export function TacticBoard({ drill }: { drill: Drill }) {
         <p className="text-fg text-sm">{step?.label}</p>
       </div>
 
+      {showSpeedControl ? (
+        <div className="flex items-center gap-2" role="group" aria-label="Velocidad">
+          <span className="text-fg-muted text-xs">Velocidad</span>
+          {SPEEDS.map((s) => (
+            <Button
+              key={s}
+              variant={speed === s ? "primary" : "secondary"}
+              className="min-h-touch flex-1 px-2 text-sm"
+              onClick={() => onSpeedChange?.(s)}
+            >
+              {s}x
+            </Button>
+          ))}
+        </div>
+      ) : null}
+
       <Legend />
 
       {/* Controls */}
@@ -95,7 +151,6 @@ export function TacticBoard({ drill }: { drill: Drill }) {
         </Button>
 
         {reduce ? (
-          // Reduced motion: no continuous animation, step navigation only.
           <span className="text-fg-muted flex-1 text-center text-xs">
             Modo sin animación
           </span>

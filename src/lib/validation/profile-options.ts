@@ -29,6 +29,14 @@ export const LEVEL_OPTIONS: Option<ProfileInput["level"]>[] = [
 export const GOAL_OPTIONS: Option<ProfileInput["goals"][number]>[] = [
   { value: "SHOOTING", label: "Tiro exterior" },
   { value: "BALL_HANDLING", label: "Ball handling" },
-  { value: "VERTICAL", label: "Explosividad vertical" },
+  { value: "FINISHING", label: "Finalización" },
+  { value: "VERTICAL", label: "Explosividad" },
+  { value: "SPEED", label: "Velocidad" },
   { value: "DEFENSE", label: "Defensa" },
+  { value: "IQ", label: "IQ de juego" },
+  { value: "STRENGTH", label: "Fuerza" },
+  { value: "MUSCLE_GAIN", label: "Masa muscular" },
+  { value: "WEIGHT_LOSS", label: "Perder grasa" },
+  { value: "ENDURANCE", label: "Resistencia" },
+  { value: "MOBILITY", label: "Movilidad" },
 ];

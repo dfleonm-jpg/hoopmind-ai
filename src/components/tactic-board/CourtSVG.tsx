@@ -37,10 +37,13 @@ export interface CourtSVGProps extends React.SVGProps<SVGSVGElement> {
 /**
  * Regulation half-court in SVG. Responsive via viewBox (works from 320px up).
  * Shares the zone geometry so the ShotChart can reuse this component.
+ * forwardRef so editors (PlayEditor) can read pointer coordinates.
  */
-export function CourtSVG({ renderZone, children, ...svgProps }: CourtSVGProps) {
+export const CourtSVG = React.forwardRef<SVGSVGElement, CourtSVGProps>(
+  function CourtSVG({ renderZone, children, ...svgProps }, ref) {
   return (
     <svg
+      ref={ref}
       viewBox={`0 0 ${COURT_W} ${COURT_H}`}
       role="img"
       aria-label="Media cancha de baloncesto"
@@ -92,4 +95,5 @@ export function CourtSVG({ renderZone, children, ...svgProps }: CourtSVGProps) {
       {children}
     </svg>
   );
-}
+  },
+);

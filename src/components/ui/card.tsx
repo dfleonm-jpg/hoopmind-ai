@@ -1,14 +1,19 @@
 import * as React from "react";
 import { cn } from "@/lib/utils/cn";
 
-export function Card({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Subtle glassmorphism surface for premium dark UI (v2). */
+  variant?: "solid" | "glass";
+}
+
+export function Card({ className, variant = "solid", ...props }: CardProps) {
   return (
     <div
       className={cn(
-        "bg-card border border-border rounded-2xl p-4 shadow-sm",
+        "rounded-2xl p-4",
+        variant === "glass"
+          ? "glass"
+          : "bg-card/80 border border-white/8 shadow-[0_14px_36px_-28px_rgb(0_0_0/0.9)]",
         className,
       )}
       {...props}

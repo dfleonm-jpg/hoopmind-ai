@@ -2,6 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { PwaBootstrap } from "@/components/pwa/PwaBootstrap";
+import { ToastProvider } from "@/components/ui/toast";
+import { AppChrome } from "@/components/nav/AppChrome";
+import { PageTransition } from "@/components/nav/PageTransition";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { ContentShell } from "@/components/nav/ContentShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,9 +19,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HoopMind AI",
+  title: "HoopMind · Become Unstoppable",
   description:
-    "Entrenamiento de baloncesto impulsado por IA para jugadores de 5v5 y 3x3.",
+    "Ecosistema de rendimiento con IA: baloncesto, gimnasio, pliometría, nutrición, recuperación y tu coach personal.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -34,7 +39,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0A0A0C",
+  themeColor: "#070709",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -45,7 +50,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="bg-bg text-fg min-h-full flex flex-col">
         <PwaBootstrap />
-        {children}
+        <ToastProvider>
+          <ContentShell>
+            <PageTransition>{children}</PageTransition>
+          </ContentShell>
+          <AppChrome />
+          <InstallPrompt />
+        </ToastProvider>
       </body>
     </html>
   );

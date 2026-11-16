@@ -14,6 +14,14 @@ export const GoalEnum = z.enum([
   "BALL_HANDLING",
   "VERTICAL",
   "DEFENSE",
+  "STRENGTH",
+  "ENDURANCE",
+  "SPEED",
+  "WEIGHT_LOSS",
+  "MUSCLE_GAIN",
+  "MOBILITY",
+  "IQ",
+  "FINISHING",
 ]);
 
 /** Payload accepted by PUT /api/profile (Req. 2.1, 2.2, 2.5). */
@@ -35,7 +43,7 @@ export const ProfileInputSchema = z.object({
   goals: z
     .array(GoalEnum)
     .min(1, "Selecciona al menos un objetivo.")
-    .max(4, "Puedes seleccionar como máximo cuatro objetivos.")
+    .max(6, "Puedes seleccionar como máximo seis objetivos.")
     .refine(
       (g) => new Set(g).size === g.length,
       "Los objetivos no pueden repetirse.",

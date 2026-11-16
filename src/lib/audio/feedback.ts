@@ -5,7 +5,7 @@
  * Short synthesized tones for shot made / attempted / block end, with mute.
  */
 
-type Cue = "made" | "attempt" | "blockEnd";
+type Cue = "made" | "attempt" | "blockEnd" | "shotClockWarn" | "buzzer";
 
 let ctx: AudioContext | null = null;
 let muted = false;
@@ -78,5 +78,36 @@ export function playCue(cue: Cue) {
       setTimeout(() => beep(520, 140, "square"), 200);
       setTimeout(() => beep(700, 220, "square"), 400);
       break;
+    case "shotClockWarn":
+      // Single short high beep for the final shot-clock seconds.
+      beep(880, 110, "square");
+      break;
+    case "buzzer":
+      // Synthesized buzzer: low sustained tone (shot-clock violation).
+      buzzer();
+      break;
   }
+}
+
+/** Long low buzzer for shot-clock expiry. */
+function buzzer() {
+  const audio = getContext();
+  if (!audio || muted) return;
+  if (audio.state === "suspended") void audio.resume();
+
+  const osc = audio.createOscillator();
+  const gain = audio.createGain();
+  osc.type = "sawtooth";
+  osc.frequency.value = 180;
+
+  const now = audio.currentTime;
+  const dur = 1.1;
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.35, now + 0.02);
+  gain.gain.setValueAtTime(0.35, now + dur - 0.1);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+  osc.connect(gain).connect(audio.destination);
+  osc.start(now);
+  osc.stop(now + dur + 0.02);
 }

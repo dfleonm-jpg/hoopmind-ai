@@ -3,6 +3,15 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { SkeletonOverlay } from "@/components/analyze/SkeletonOverlay";
+import { FramingGuide } from "@/components/analyze/FramingGuide";
+import { DiagnosisCard } from "@/components/analyze/DiagnosisCard";
+import {
+  GymFormDiagnosis,
+  FORM_EXERCISES,
+  type FormExercise,
+  type FemurClass,
+} from "@/components/analyze/GymFormDiagnosis";
 import {
   CONFIDENCE_THRESHOLD,
   type PoseEngine,
@@ -13,7 +22,14 @@ type Status = "idle" | "recording" | "analyzing" | "done" | "error";
 
 const MAX_RECORD_MS = 10_000;
 
-export function ShotAnalyzer({ sessionId }: { sessionId?: string }) {
+export function ShotAnalyzer({
+  sessionId,
+  femurClass = null,
+}: {
+  sessionId?: string;
+  femurClass?: FemurClass;
+}) {
+  const [exercise, setExercise] = React.useState<FormExercise>("SHOT");
   const [status, setStatus] = React.useState<Status>("idle");
   const [result, setResult] = React.useState<ShotAnalysisResult | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -146,30 +162,69 @@ export function ShotAnalyzer({ sessionId }: { sessionId?: string }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Exercise selector (v4 Fase 6): shot or gym form check */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Ejercicio a analizar">
+        {FORM_EXERCISES.map((e) => (
+          <Button
+            key={e.v}
+            variant={exercise === e.v ? "primary" : "secondary"}
+            className="min-h-0 h-10 shrink-0 px-3 text-sm"
+            onClick={() => setExercise(e.v)}
+          >
+            {e.l}
+          </Button>
+        ))}
+      </div>
+
       <Card className="flex flex-col gap-3">
-        <CardTitle>Analiza tu tiro</CardTitle>
+        <CardTitle>
+          {exercise === "SHOT" ? "Analiza tu tiro" : "Form check de gym"}
+        </CardTitle>
         <CardDescription>
-          Graba un tiro libre o un triple (máx. 10 s) o sube un video. El
-          análisis se ejecuta en tu dispositivo; el video no se sube a ningún
-          servidor.
+          Graba (máx. 10 s) o sube un video de perfil. El análisis se ejecuta en
+          tu dispositivo; el video no se sube a ningún servidor.
         </CardDescription>
 
-        {/* Live preview while recording */}
-        <video
-          ref={previewRef}
-          playsInline
-          muted
-          className={`w-full rounded-xl ${status === "recording" ? "block" : "hidden"}`}
-        />
+        {/* Live preview + framing-guide silhouette (before/while recording) */}
+        <div
+          className={`relative w-full overflow-hidden rounded-xl ${
+            status === "recording" ? "block" : "hidden"
+          }`}
+        >
+          <video ref={previewRef} playsInline muted className="w-full" />
+          <FramingGuide />
+        </div>
 
-        {/* Recorded/uploaded playback */}
+        {/* Recorded/uploaded playback with skeleton overlay at the release frame */}
         {videoUrl && status !== "recording" ? (
-          <video
-            src={videoUrl}
-            controls
-            playsInline
-            className="w-full rounded-xl"
-          />
+          <div className="relative w-full overflow-hidden rounded-xl">
+            <video
+              src={videoUrl}
+              controls
+              playsInline
+              className="w-full rounded-xl"
+            />
+            {result?.keyframe && !lowConfidence ? (
+              <SkeletonOverlay
+                keyframe={result.keyframe}
+                elbowAngle={result.elbowAngle}
+                kneeAngle={result.kneeFlexion}
+                className="pointer-events-none absolute inset-0 h-full w-full"
+              />
+            ) : null}
+          </div>
+        ) : null}
+
+        {result?.keyframe && !lowConfidence ? (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <span className="text-fg-muted flex items-center gap-1.5">
+              <span className="bg-success h-2.5 w-2.5 rounded-full" /> Rango
+              óptimo
+            </span>
+            <span className="text-fg-muted flex items-center gap-1.5">
+              <span className="bg-accent h-2.5 w-2.5 rounded-full" /> Ajustar
+            </span>
+          </div>
         ) : null}
 
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -257,6 +312,19 @@ export function ShotAnalyzer({ sessionId }: { sessionId?: string }) {
             </p>
           ) : null}
         </Card>
+      ) : null}
+
+      {/* Guided diagnosis: basketball shot (v3) or gym form check (v4 F6). */}
+      {result && !lowConfidence ? (
+        exercise === "SHOT" ? (
+          <DiagnosisCard result={result} />
+        ) : (
+          <GymFormDiagnosis
+            exercise={exercise}
+            result={result}
+            femurClass={femurClass}
+          />
+        )
       ) : null}
     </div>
   );

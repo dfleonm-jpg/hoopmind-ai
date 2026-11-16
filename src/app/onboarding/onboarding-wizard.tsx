@@ -88,7 +88,7 @@ export function OnboardingWizard({
       const has = d.goals.includes(goal);
       const goals = has
         ? d.goals.filter((g) => g !== goal)
-        : d.goals.length < 4
+        : d.goals.length < 6
           ? [...d.goals, goal]
           : d.goals;
       return { ...d, goals };
@@ -301,7 +301,7 @@ export function OnboardingWizard({
         {step === 2 && (
           <fieldset className="flex flex-col gap-2">
             <legend className="text-fg mb-1 text-sm font-medium">
-              Objetivos (1–4)
+              Objetivos (1–6)
             </legend>
             <div className="grid grid-cols-1 gap-2">
               {GOAL_OPTIONS.map((o) => (
